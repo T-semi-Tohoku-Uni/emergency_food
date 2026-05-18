@@ -8,8 +8,10 @@ https://t-semi.esa.io/posts/644
 Arduino Nano(おそらく旧ブートローダー)
 
 ライブラリ
+sudo apt install python3-dev build-essential -y
 pip install opencv-python smbus2 platformio pyserial
 (オプション isort)
+pip install Adafruit-Blinka adafruit-circuitpython-pca9685 adafruit-circuitpython-motor
 
 必ずやること
 venvを有効にするために必ず以下のコードを実行してから作業をする
