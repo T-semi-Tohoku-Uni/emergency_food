@@ -5,8 +5,11 @@ https://t-semi.esa.io/posts/644
 ラズパイ3B
 ラズパイOS Lite 64bit trixe
 
+Arduino Nano(おそらく旧ブートローダー)
+
 ライブラリ
-pip install opencv-python smbus2
+pip install opencv-python smbus2 platformio pyserial
+(オプション isort)
 
 必ずやること
 venvを有効にするために必ず以下のコードを実行してから作業をする
