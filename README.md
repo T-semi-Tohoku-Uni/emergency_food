@@ -8,6 +8,7 @@ https://t-semi.esa.io/posts/644
 Arduino Nano(おそらく旧ブートローダー)
 
 ライブラリ
+sudo apt install libcamera-apps -y
 sudo apt install python3-dev build-essential -y
 pip install opencv-python smbus2 platformio pyserial
 (オプション isort)
