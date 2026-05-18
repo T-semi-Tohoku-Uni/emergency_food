@@ -15,4 +15,4 @@ pip install Adafruit-Blinka adafruit-circuitpython-pca9685 adafruit-circuitpytho
 
 必ずやること
 venvを有効にするために必ず以下のコードを実行してから作業をする
-source venv/bin/activate
+source venv/bin/activate (抜けるときは deactivate を実行)
