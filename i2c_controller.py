@@ -19,7 +19,7 @@ class ServoController:
         self.servos = []
         for i in range(channels):
             # 一般的なSG90などのサーボはパルス幅 0.5ms(500us) ~ 2.4ms(2400us) で0〜180度動く
-            # お使いのサーボに合わせて min_pulse / max_pulse は調整してください
+            # デフォルトでは標準サーボとして初期化しておく
             s = servo.Servo(self.pca.channels[i], min_pulse=500, max_pulse=2400)
             self.servos.append(s)
 
@@ -29,10 +29,33 @@ class ServoController:
         channel: 0 ~ 15 (PCA9685のピン番号)
         angle: 0 ~ 180 (度)
         """
+        # すでにローテーションサーボとして使われているチャンネルの誤操作を防ぐ
+        if isinstance(self.servos[channel], servo.ContinuousServo):
+            print(f"Error: チャンネル{channel}はローテーションサーボとして設定されています。")
+            return
+
         if 0 <= angle <= 180:
             self.servos[channel].angle = angle
         else:
             print(f"Error: 角度は0から180の間で指定してください (入力値: {angle})")
+
+    def set_speed(self, channel, speed):
+        """
+        指定したチャンネルのローテーション(連続回転)サーボの速度を設定する
+        channel: 0 ~ 15
+        speed: -1.0 (逆転最大) ~ 1.0 (正転最大), 0.0 で停止
+        """
+        # 初回呼び出し時に標準サーボオブジェクトをContinuousServoに置き換える
+        if not isinstance(self.servos[channel], servo.ContinuousServo):
+            self.servos[channel] = servo.ContinuousServo(
+                self.pca.channels[channel], min_pulse=500, max_pulse=2400
+            )
+
+        # 速度を設定 (throttleプロパティを使用)
+        if -1.0 <= speed <= 1.0:
+            self.servos[channel].throttle = speed
+        else:
+            print(f"Error: 速度は-1.0から1.0の間で指定してください (入力値: {speed})")
 
     def cleanup(self):
         """終了時にPCA9685の出力をリセットする"""
