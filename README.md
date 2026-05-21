@@ -1,7 +1,7 @@
 # README
 
 ## 制作記事
-- [t-semi esa.io 記事 (#644)](https://t-semi.esa.io/posts/644)
+- [InRoF2026日誌(#644](https://t-semi.esa.io/posts/644)
 
 ## 動作環境
 - **SBC:** Raspberry Pi 3 Model B
