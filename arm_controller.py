@@ -33,20 +33,21 @@ class ArmController:
 
     def set_position(self, length, height):
         # アームの長さと高さを指定して動かす
+
+        # アームの位置が限界を超えていないかを確認
         self._check_limits(length, height)
         
         alfa = math.atan2(height,length)
         radius = math.sqrt(length**2 + height**2)
 
         # 逆運動学の計算式を実装する
-        # 注意: Pythonでは2乗の計算に ^ ではなく ** を使用します
         angle_right_servo = alfa + math.acos((length**2 + height**2 + self.arm_length_1**2 - self.arm_length_2**2) / (2 * self.arm_length_1 * radius))
         angle_left_servo  = alfa + math.asin((length**2 + height**2 - self.arm_length_1**2 + self.arm_length_2**2) / (2 * self.arm_length_2 * radius))
 
+        # 現状のコードだと絶対にservoの角度が限界以上回そうとしてしまうはずなので、
+        # そうならないように改良する必要がある。
         self.servo_ctrl.set_angle(self.right_servo, math.degrees(angle_right_servo))
         self.servo_ctrl.set_angle(self.left_servo, math.degrees(angle_left_servo))
-
-
 
     def _check_limits(self, length, height):
         # アームの先端のハンドの位置が限界値を超えていないかチェックする
