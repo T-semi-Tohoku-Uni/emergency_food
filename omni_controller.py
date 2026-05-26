@@ -4,13 +4,12 @@ import math
 
 # 方針
 # その場回転とベクトルとxy方向の速度指定のコードを実装する。
-# 車体前方を前とし、右前のタイヤから反時計回りにa,b,c,dとする。
 
-class OmuniDrive:
-    def __init__(self,front_right=1,front_left=0,rear_left=2,rear_right=3,max_speed = 1.0):
+class OmniSpeed:
+    def __init__(self,front_right=0,front_left=1,rear_left=2,rear_right=3,max_speed = 1.0):
         #speedxy用の変数
-        self.front_right = front_right
         self.front_left= front_left
+        self.front_right = front_right
         self.rear_left = rear_left
         self.rear_right = rear_right
         # サーボコントローラーの初期化
@@ -41,7 +40,7 @@ class OmuniDrive:
         self.rot_servo.set_speed(self.rear_right, v_d)
 
         # 前方をy,右向きをxと億
-    def speed_xy(self,x,y):
+    def Speedxy(self,x,y):
         nx = self.inv_root2 * x
         ny = self.inv_root2 * y
 
@@ -54,7 +53,7 @@ class OmuniDrive:
 
 
     #前方向からの角度をphiとおく、
-    def speed_polar(self,v,phi):
+    def SpeedPolar(self,v,phi):
         rad = math.radians(phi)
         nx = v * self.inv_root2 * math.sin(rad)
         ny = v * self.inv_root2 * math.cos(rad)
@@ -66,7 +65,7 @@ class OmuniDrive:
         
         self._set_motors(v_a, v_b, v_c, v_d)
     
-    def speed_rotation(self,omega):
+    def rotation(self,omega):
         v_a = omega
         v_b = omega
         v_c = omega
