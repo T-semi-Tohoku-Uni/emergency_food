@@ -7,6 +7,7 @@ def main():
 
     # オムニの初期化
     omni = OmniSpeed()
+    servo_ctrl =  ServoController()
 
     try:
         # 例：PCA9685の「0番」ピンに繋いだサーボを動かすテスト
@@ -23,6 +24,9 @@ def main():
         print("rotation")
         omni.rotation(10)
         time.sleep(10)
+
+        print("stop")
+        omni.rotation(0)
 
     except KeyboardInterrupt:
         # Ctrl+Cで停止したときの処理
