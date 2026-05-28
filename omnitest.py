@@ -18,7 +18,7 @@ def main():
         time.sleep(10)
 
         print("SpeedPolar")
-        omni.SpeedPolar(10,10)
+        omni.SpeedPolar(10,0)
         time.sleep(10)
 
         print("rotation")
@@ -26,7 +26,9 @@ def main():
         time.sleep(10)
 
         print("stop")
-        omni.rotation(0)
+        #omni.rotation(0)
+        omni.SpeedPolar(0,0)
+        time.sleep(10)
 
     except KeyboardInterrupt:
         # Ctrl+Cで停止したときの処理
