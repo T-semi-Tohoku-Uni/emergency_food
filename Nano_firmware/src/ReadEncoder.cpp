@@ -28,8 +28,8 @@ void ReadEncoder::handleInterrupt() {
 
 // 現在のステップ数を返すメソッドの実装
 long ReadEncoder::getStep() {
-  // 8bitマイコンではlong(4byte)の読み取り中に割り込まれるとデータが壊れるため、
-  // 一時的に割り込みを停止して安全に値をコピーする
+  // Raspberry Pi Pico(RP2040)は32bitマイコンなのでlong型の読み取りはアトミックに行われますが、
+  // 複数のアーキテクチャでの互換性と安全性を考慮し、割り込み停止による排他制御を残しています。
   noInterrupts();
   long currentStep = encoderStep;
   interrupts();
