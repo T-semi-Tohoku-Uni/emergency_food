@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "ReadEncoder.h"
 
 // LEDの現在の状態を覚えておくための変数
 bool ledState = false; 
