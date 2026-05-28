@@ -48,7 +48,7 @@ class ServoController:
         # 初回呼び出し時に標準サーボオブジェクトをContinuousServoに置き換える
         if not isinstance(self.servos[channel], servo.ContinuousServo):
             self.servos[channel] = servo.ContinuousServo(
-                self.pca.channels[channel], min_pulse=500, max_pulse=2400
+                self.pca.channels[channel], min_pulse=700, max_pulse=2300
             )
 
         # 速度を設定 (throttleプロパティを使用)
