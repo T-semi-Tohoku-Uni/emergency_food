@@ -1,28 +1,32 @@
 #include <Arduino.h>
 #include "ReadEncoder.h"
 
-// LEDの現在の状態を覚えておくための変数
-bool ledState = false; 
+
+// インスタンスの作成。Arduino Nanoの外部割り込み対応ピンは 2番 と 3番 です。
+ReadEncoder myEncoder(2, 3); 
+
+// 割り込みサービスルーチン (ISR)
+// attachInterruptにはクラスのメソッドを直接渡せないため、この関数でラップします。
+void encoderISR() {
+  myEncoder.handleInterrupt();
+}
 
 void setup() {
   Serial.begin(115200);
   
-  // 内蔵LED（通常は13番ピン）を出力モードに設定
-  pinMode(LED_BUILTIN, OUTPUT); 
+  myEncoder.begin();
+
+  // 2番ピン（pinA）の立下り(FALLING)エッジで割り込みを発生させる
+  attachInterrupt(digitalPinToInterrupt(2), encoderISR, FALLING);
 }
 
 void loop() {
-  // 1. センサー値の読み取りと送信
-  int sensor1 = analogRead(A0);
-  int sensor2 = analogRead(A1);
+  // 1. エンコーダーのステップ数と回転速度を計算して送信
+  Serial.print("Step: ");
+  Serial.print(myEncoder.getStep());
+  Serial.print(", Velocity(step/s): ");
+  Serial.println(myEncoder.getVelocity()); 
 
-  Serial.print(sensor1);
-  Serial.print(",");
-  Serial.println(sensor2); 
-
-  // 2. Lチカ（通信インジケーター）
-  ledState = !ledState;                  // 状態を反転させる（ONならOFF、OFFならONに）
-  digitalWrite(LED_BUILTIN, ledState);   // LEDに状態を書き込む
 
   delay(100); // 100ミリ秒待機
 }

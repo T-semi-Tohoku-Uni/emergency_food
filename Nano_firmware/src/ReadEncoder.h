@@ -7,17 +7,24 @@ class ReadEncoder {
 private:
   uint8_t pinA;       // エンコーダーのAピン
   uint8_t pinB;      // エンコーダーのBピン
-  uint8_t EncoderStep;     // エンコーダーの状態
+  volatile long encoderStep; // 割り込みで値が変わるため volatile を付与
+
+  long lastStep;          // 速度計算用：前回のステップ数
+  unsigned long lastTime; // 速度計算用：前回の時間（ミリ秒）
 
 public:
-  // コンストラクタ（宣言のみ）
-  LedBlinker(uint8_t cone_pinA, uint8_t cone_pinB);
+  // コンストラクタ
+  ReadEncoder(uint8_t cone_pinA, uint8_t cone_pinB);
 
-  // 初期設定（宣言のみ）
+  // 初期設定
   void begin();
 
-  // LEDの状態を反転させる（宣言のみ）
-  void ReadState();
+  // 割り込み発生時に呼び出すメソッド
+  void handleInterrupt();
+
+  // 現在のカウントや回転速度を取得する
+  long getStep();
+  float getVelocity();
 };
 
 #endif // READ_ENCODER_H
