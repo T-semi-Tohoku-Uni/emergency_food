@@ -6,7 +6,7 @@ import math
 # その場回転とベクトルとxy方向の速度指定のコードを実装する。
 
 class OmniSpeed:
-    def __init__(self,front_right=0,front_left=1,rear_left=2,rear_right=3,max_speed = 1.0):
+    def __init__(self,front_right=0,front_left=15,rear_left=14,rear_right=1,max_speed = 1.0):
         #speedxy用の変数
         self.front_left= front_left
         self.front_right = front_right
@@ -41,8 +41,8 @@ class OmniSpeed:
 
         # 前方をy,右向きをxと億
     def Speedxy(self,x,y):
-        nx = self.inv_root2 * x
-        ny = self.inv_root2 * y
+        nx = self.inv_root2 * x/100
+        ny = self.inv_root2 * y/100
 
         v_a = nx - ny
         v_b = nx + ny
@@ -55,8 +55,8 @@ class OmniSpeed:
     #前方向からの角度をphiとおく、
     def SpeedPolar(self,v,phi):
         rad = math.radians(phi)
-        nx = v * self.inv_root2 * math.sin(rad)
-        ny = v * self.inv_root2 * math.cos(rad)
+        nx = v * self.inv_root2 * math.sin(rad)/100
+        ny = v * self.inv_root2 * math.cos(rad)/100
 
         v_a = nx - ny
         v_b = nx + ny
@@ -66,9 +66,9 @@ class OmniSpeed:
         self._set_motors(v_a, v_b, v_c, v_d)
     
     def rotation(self,omega):
-        v_a = omega
-        v_b = omega
-        v_c = omega
-        v_d = omega
+        v_a = omega/100
+        v_b = omega/100
+        v_c = omega/100
+        v_d = omega/100
 
         self._set_motors(v_a, v_b, v_c, v_d) 
