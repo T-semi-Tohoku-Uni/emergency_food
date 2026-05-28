@@ -1,46 +1,44 @@
 #include <Arduino.h>
-#include "ReadEncoder.h"
+#include <Encoder.h> // 追加: 信頼性の高い標準ライブラリ
 
+// Encoderライブラリは内部で割り込みと状態遷移を使用して
+// 機械式エンコーダーのチャタリング（ノイズ）を自動的に防ぎます
+Encoder myEncoder1(2, 3);
+Encoder myEncoder2(4, 5);
 
-// Raspberry Pi PicoはほぼすべてのGPIOピンで外部割り込み(attachInterrupt)が可能です。
-// 複数のエンコーダーを簡単に接続できます。
-ReadEncoder myEncoder1(2, 3); // 1つ目のエンコーダー (GP2, GP3)
-ReadEncoder myEncoder2(4, 5); // 2つ目のエンコーダー (GP4, GP5)
-
-// 1つ目のエンコーダー用ISR
-void encoder1ISR() {
-  myEncoder1.handleInterrupt();
-}
-
-// 2つ目のエンコーダー用ISR
-void encoder2ISR() {
-  myEncoder2.handleInterrupt();
-}
+long lastStep1 = 0;
+long lastStep2 = 0;
+unsigned long lastTime = 0;
 
 void setup() {
   Serial.begin(115200);
-  
-  myEncoder1.begin();
-  myEncoder2.begin();
-
-  // それぞれのAピン(2番, 4番)の立下り(FALLING)エッジで割り込みを発生させる
-  attachInterrupt(digitalPinToInterrupt(2), encoder1ISR, FALLING);
-  attachInterrupt(digitalPinToInterrupt(4), encoder2ISR, FALLING);
+  lastTime = millis();
 }
 
 void loop() {
-  // エンコーダー1のステップ数と回転速度
-  Serial.print("Encoder1 - Step: ");
-  Serial.print(myEncoder1.getStep());
-  Serial.print(", Vel: ");
-  Serial.print(myEncoder1.getVelocity()); 
+  unsigned long currentTime = millis();
+  float dt = (currentTime - lastTime) / 1000.0;
 
-  // エンコーダー2のステップ数と回転速度
-  Serial.print(" | Encoder2 - Step: ");
-  Serial.print(myEncoder2.getStep());
-  Serial.print(", Vel: ");
-  Serial.println(myEncoder2.getVelocity()); 
+  // 100ミリ秒ごとに計算して出力 (delayを使わない非同期処理)
+  if (dt >= 0.1) {
+    long currentStep1 = myEncoder1.read();
+    long currentStep2 = myEncoder2.read();
 
+    float vel1 = (currentStep1 - lastStep1) / dt;
+    float vel2 = (currentStep2 - lastStep2) / dt;
 
-  delay(100); // 100ミリ秒待機
+    Serial.print("Encoder1 - Step: ");
+    Serial.print(currentStep1);
+    Serial.print(", Vel: ");
+    Serial.print(vel1); 
+
+    Serial.print(" | Encoder2 - Step: ");
+    Serial.print(currentStep2);
+    Serial.print(", Vel: ");
+    Serial.println(vel2); 
+
+    lastStep1 = currentStep1;
+    lastStep2 = currentStep2;
+    lastTime = currentTime;
+  }
 }
