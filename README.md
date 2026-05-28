@@ -29,6 +29,7 @@ deactivate
 sudo apt update
 sudo apt install libcamera-apps -y
 sudo apt install python3-dev build-essential -y
+sudo apt install -y python3 python3-venv python3-pip cmake
 ```
 
 ### 2. Pythonパッケージ（pip）
