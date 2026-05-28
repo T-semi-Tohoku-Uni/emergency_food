@@ -9,7 +9,7 @@ def main():
 
     try:
         # 例：PCA9685の「0番」ピンに繋いだサーボを動かすテスト
-        channel = 0
+        channel = 14
 
         print("反時計回り(CCW)で回転します...")
         # throttle > 0 (1500~2300 µsecの範囲)
@@ -32,7 +32,7 @@ def main():
 
         print("停止します...")
         # throttle = 0 (1500 µsec)
-        servo_ctrl.set_speed(channel, 0.1) 
+        servo_ctrl.set_speed(channel, 0) 
         time.sleep(2)
 
     except KeyboardInterrupt:
