@@ -71,7 +71,7 @@ void loop() {
     lastStep_b = currentStep_b;
     lastStep_c = currentStep_c;
     lastStep_d = currentStep_d;
-    
+
     // 速度計算のブレを防ぐため、実際の計測時刻で lastTime を更新する
     lastTime = currentTime;
   }
