@@ -34,6 +34,12 @@ class OmniSpeed:
             v_c *= scale
             v_d *= scale
         
+        # サーボの入力範囲(-1.0 ~ 1.0)に正規化
+        v_a /= self.max_speed
+        v_b /= self.max_speed
+        v_c /= self.max_speed
+        v_d /= self.max_speed
+        
         self.rot_servo.set_speed(self.front_right, v_a)
         self.rot_servo.set_speed(self.front_left, v_b)
         self.rot_servo.set_speed(self.rear_left, v_c)
