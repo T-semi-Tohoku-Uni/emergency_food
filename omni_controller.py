@@ -72,3 +72,14 @@ class OmniSpeed:
         v_d = omega
 
         self._set_motors(v_a, v_b, v_c, v_d) 
+
+    def Speedxy_rotation(self, x, y, omega):
+        nx = self.inv_root2 * x
+        ny = self.inv_root2 * y
+        # 平行移動の成分と、回転の成分(omega)を足し合わせる
+        v_a = nx - ny + omega
+        v_b = nx + ny + omega
+        v_c = -nx + ny + omega
+        v_d = -nx - ny + omega
+
+        self._set_motors(v_a, v_b, v_c, v_d)
