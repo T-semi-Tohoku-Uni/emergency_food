@@ -3,48 +3,76 @@
 
 // エンコーダーのインスタンスを作成
 // (PioEncoderは連続した2つのピンを使用するため、最初のピン番号のみを指定します)
-PioEncoder myEncoder1(2); // ピン2と3を使用
-PioEncoder myEncoder2(4); // ピン4と5を使用
+PioEncoder myEncoder_a(2); // ピン2と3を使用
+PioEncoder myEncoder_b(4); // ピン4と5を使用
+PioEncoder myEncoder_c(6); // ピン6と7を使用
+PioEncoder myEncoder_d(8); // ピン8と9を使用
 
-long lastStep1 = 0;
-long lastStep2 = 0;
+long lastStep_a = 0;
+long lastStep_b = 0;
+long lastStep_c = 0;
+long lastStep_d = 0;
 unsigned long lastTime = 0;
 
 void setup() {
   Serial.begin(115200);
   
   // PIOエンコーダーの初期化
-  myEncoder1.begin();
-  myEncoder2.begin();
-
-  lastTime = millis();
+  myEncoder_a.begin();
+  myEncoder_b.begin();
+  myEncoder_c.begin();
+  myEncoder_d.begin();
+  
+  Serial.println("PIO Encoder Test Started:");
+  lastTime = micros();
 }
 
 void loop() {
-  unsigned long currentTime = millis();
-  float dt = (currentTime - lastTime) / 1000.0;
+  unsigned long currentTime = micros();
+  // unsigned long型同士の引き算により、オーバーフロー発生時も正しい経過時間が計算されます
+  unsigned long elapsedTime = currentTime - lastTime;
 
-  // 100ミリ秒ごとに計算して出力 (delayを使わない非同期処理)
-  if (dt >= 0.1) {
+  // 小数誤差を避けるため、経過時間をマイクロ秒（100,000us = 100ms）のまま判定
+  if (elapsedTime >= 100000) {
+    // 実際の経過時間を元に dt を計算し、速度の計算精度を保つ
+    float dt = elapsedTime / 1000000.0; 
     // 変更: PIOステートマシンから現在のカウントを取得
-    long currentStep1 = myEncoder1.getCount();
-    long currentStep2 = myEncoder2.getCount();
+    long currentStep_a = myEncoder_a.getCount();
+    long currentStep_b = myEncoder_b.getCount();
+    long currentStep_c = myEncoder_c.getCount();
+    long currentStep_d = myEncoder_d.getCount();
 
-    float vel1 = (currentStep1 - lastStep1) / dt;
-    float vel2 = (currentStep2 - lastStep2) / dt;
+    float vel_a = (currentStep_a - lastStep_a) / dt;
+    float vel_b = (currentStep_b - lastStep_b) / dt;
+    float vel_c = (currentStep_c - lastStep_c) / dt;
+    float vel_d = (currentStep_d - lastStep_d) / dt;
 
-    Serial.print("Encoder1 - Step: ");
-    Serial.print(currentStep1);
-    Serial.print(", Vel: ");
-    Serial.print(vel1); 
+    Serial.print("Encoder_a - Step: ");
+    Serial.print(currentStep_a);
+    Serial.print(", Vel_a: ");
+    Serial.print(vel_a); 
 
-    Serial.print(" | Encoder2 - Step: ");
-    Serial.print(currentStep2);
-    Serial.print(", Vel: ");
-    Serial.println(vel2); 
+    Serial.print(" | Encoder_b - Step: ");
+    Serial.print(currentStep_b);
+    Serial.print(", Vel_b: ");
+    Serial.print(vel_b); 
 
-    lastStep1 = currentStep1;
-    lastStep2 = currentStep2;
+    Serial.print(" | Encoder_c - Step: ");
+    Serial.print(currentStep_c);
+    Serial.print(", Vel_c: ");
+    Serial.print(vel_c); 
+
+    Serial.print(" | Encoder_d - Step: ");
+    Serial.print(currentStep_d);
+    Serial.print(", Vel_d: ");
+    Serial.println(vel_d); 
+
+    lastStep_a = currentStep_a;
+    lastStep_b = currentStep_b;
+    lastStep_c = currentStep_c;
+    lastStep_d = currentStep_d;
+    
+    // 速度計算のブレを防ぐため、実際の計測時刻で lastTime を更新する
     lastTime = currentTime;
   }
 }
