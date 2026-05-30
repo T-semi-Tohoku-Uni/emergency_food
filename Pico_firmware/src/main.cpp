@@ -4,10 +4,10 @@
 
 // エンコーダーのインスタンスを作成
 // (PioEncoderは連続した2つのピンを使用するため、最初のピン番号のみを指定します)
-PioEncoder myEncoder_a(2); // ピン2と3を使用
-PioEncoder myEncoder_b(4); // ピン4と5を使用
-PioEncoder myEncoder_c(6); // ピン6と7を使用
-PioEncoder myEncoder_d(8); // ピン8と9を使用
+PioEncoder myEncoder_a(21); // ピン2と3を使用
+PioEncoder myEncoder_b(9); // ピン4と5を使用
+PioEncoder myEncoder_c(13); // ピン6と7を使用
+PioEncoder myEncoder_d(17); // ピン8と9を使用
 
 long lastStep_a = 0;
 long lastStep_b = 0;
