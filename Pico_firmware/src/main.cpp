@@ -25,18 +25,18 @@ void setup() {
   myEncoder_d.begin();
   
   Serial.println("PIO Encoder Test Started:");
-  lastTime = micros();
+  lastTime = millis();
 }
 
 void loop() {
-  unsigned long currentTime = micros();
+  unsigned long currentTime = millis();
   // unsigned long型同士の引き算により、オーバーフロー発生時も正しい経過時間が計算されます
   unsigned long elapsedTime = currentTime - lastTime;
 
   // 小数誤差を避けるため、経過時間をマイクロ秒（100,000us = 100ms）のまま判定
-  if (elapsedTime >= 100000) {
+  if (elapsedTime >= 1000) {
     // 実際の経過時間を元に dt を計算し、速度の計算精度を保つ
-    float dt = elapsedTime / 1000000.0; 
+    float dt = elapsedTime / 1000.0; 
     // 変更: PIOステートマシンから現在のカウントを取得
     long currentStep_a = myEncoder_a.getCount();
     long currentStep_b = myEncoder_b.getCount();
