@@ -1,0 +1,12 @@
+.pio
+# PlatformIOの一時ファイル・ビルド成果物・自動ダウンロードされたライブラリ
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# インテリセンス（コード解析）用のキャッシュ
+.clang_complete
+.gcc-flags.json
+
+# VS Codeの設定（環境依存のパスが含まれるため除外を推奨）
+.vscode/
