@@ -29,7 +29,9 @@ deactivate
 sudo apt update
 sudo apt install libcamera-apps -y
 sudo apt install python3-dev build-essential -y
+sudo apt install -y python3 python3-venv python3-pip cmake
 sudo apt-get install i2c-tools
+sudo apt install evtest
 ```
 
 ### 2. Pythonパッケージ（pip）
@@ -37,6 +39,7 @@ isortは必須じゃない
 ```bash
 pip install opencv-python smbus2 platformio pyserial
 pip install Adafruit-Blinka adafruit-circuitpython-pca9685 adafruit-circuitpython-motor
+pip install evdev
 pip install isort
 ```
 
