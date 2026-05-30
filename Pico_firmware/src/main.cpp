@@ -1,10 +1,11 @@
 #include <Arduino.h>
-#include <PioEncoder.h> // 変更: PIOを利用したエンコーダーライブラリ
+//#include <PioEncoder.h> // 変更: PIOを利用したエンコーダーライブラリ
+#include <pio_encoder.h>
 
 // エンコーダーのインスタンスを作成
 // (PioEncoderは連続した2つのピンを使用するため、最初のピン番号のみを指定します)
-PioEncoder myEncoder1(2); // ピン2と3を使用
-PioEncoder myEncoder2(4); // ピン4と5を使用
+PioEncoder myEncoder1(9); // ピン2と3を使用
+PioEncoder myEncoder2(13); // ピン4と5を使用
 
 long lastStep1 = 0;
 long lastStep2 = 0;
