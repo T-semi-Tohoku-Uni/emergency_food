@@ -48,23 +48,23 @@ void loop() {
     float vel_c = (currentStep_c - lastStep_c) / dt;
     float vel_d = (currentStep_d - lastStep_d) / dt;
 
-    Serial.print("a - Step: ");
-    Serial.print(currentStep_a);
+    //Serial.print("a - Step: ");
+    //Serial.print(currentStep_a);
     Serial.print(", Vel_a: ");
     Serial.print(vel_a); 
 
-    Serial.print(" | b - Step: ");
-    Serial.print(currentStep_b);
+    //Serial.print(" | b - Step: ");
+    //Serial.print(currentStep_b);
     Serial.print(", Vel_b: ");
     Serial.print(vel_b); 
 
-    Serial.print(" | c - Step: ");
-    Serial.print(currentStep_c);
+    //Serial.print(" | c - Step: ");
+    //Serial.print(currentStep_c);
     Serial.print(", Vel_c: ");
     Serial.print(vel_c); 
 
-    Serial.print(" | d - Step: ");
-    Serial.print(currentStep_d);
+    //Serial.print(" | d - Step: ");
+    //Serial.print(currentStep_d);
     Serial.print(", Vel_d: ");
     Serial.println(vel_d); 
 
