@@ -1,5 +1,6 @@
 #include <Arduino.h>
-#include <PioEncoder.h> // 変更: PIOを利用したエンコーダーライブラリ
+//#include <PioEncoder.h> // 変更: PIOを利用したエンコーダーライブラリ
+#include <pio_encoder.h>
 
 // エンコーダーのインスタンスを作成
 // (PioEncoderは連続した2つのピンを使用するため、最初のピン番号のみを指定します)
