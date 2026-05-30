@@ -18,11 +18,13 @@ def main():
     # オムニホイール制御の初期化
     omni = OmniSpeed(max_speed=1.0)
 
-    # 接続されているデバイスからDualSenseを探す
     devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
     controller = None
+
+    # DualSense（本体）を探す
     for device in devices:
-        if "Wireless Controller" in device.name:
+        # "Wireless Controller"が含まれていて、かつ"Touchpad"や"Motion"が含まれていないものを本体とみなす
+        if "Wireless Controller" in device.name and "Touchpad" not in device.name and "Motion" not in device.name:
             controller = device
             break
 
