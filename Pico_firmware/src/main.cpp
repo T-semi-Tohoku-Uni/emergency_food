@@ -34,9 +34,9 @@ void loop() {
   unsigned long elapsedTime = currentTime - lastTime;
 
   // 小数誤差を避けるため、経過時間をマイクロ秒（100,000us = 100ms）のまま判定
-  if (elapsedTime >= 1000) {
+  if (elapsedTime >= 100) {
     // 実際の経過時間を元に dt を計算し、速度の計算精度を保つ
-    float dt = elapsedTime / 1000.0; 
+    float dt = elapsedTime / 100.0; 
     // 変更: PIOステートマシンから現在のカウントを取得
     long currentStep_a = myEncoder_a.getCount();
     long currentStep_b = myEncoder_b.getCount();
@@ -48,22 +48,22 @@ void loop() {
     float vel_c = (currentStep_c - lastStep_c) / dt;
     float vel_d = (currentStep_d - lastStep_d) / dt;
 
-    Serial.print("Encoder_a - Step: ");
+    Serial.print("a - Step: ");
     Serial.print(currentStep_a);
     Serial.print(", Vel_a: ");
     Serial.print(vel_a); 
 
-    Serial.print(" | Encoder_b - Step: ");
+    Serial.print(" | b - Step: ");
     Serial.print(currentStep_b);
     Serial.print(", Vel_b: ");
     Serial.print(vel_b); 
 
-    Serial.print(" | Encoder_c - Step: ");
+    Serial.print(" | c - Step: ");
     Serial.print(currentStep_c);
     Serial.print(", Vel_c: ");
     Serial.print(vel_c); 
 
-    Serial.print(" | Encoder_d - Step: ");
+    Serial.print(" | d - Step: ");
     Serial.print(currentStep_d);
     Serial.print(", Vel_d: ");
     Serial.println(vel_d); 
