@@ -4,9 +4,10 @@ import evdev
 devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
 controller = None
 
-# DualSense（Wireless Controller）を探す
+# DualSense（本体）を探す
 for device in devices:
-    if "Wireless Controller" in device.name:
+    # "Wireless Controller"が含まれていて、かつ"Touchpad"や"Motion"が含まれていないものを本体とみなす
+    if "Wireless Controller" in device.name and "Touchpad" not in device.name and "Motion" not in device.name:
         controller = device
         break
 
@@ -26,8 +27,8 @@ try:
             print(evdev.categorize(event))
             
         # ※もしアナログスティックの入力も見たい場合は、下の2行の # を消してください
-        # elif event.type == evdev.ecodes.EV_ABS:
-        #     print(evdev.categorize(event))
+        #elif event.type == evdev.ecodes.EV_ABS:
+        #    print(evdev.categorize(event))
 
 except KeyboardInterrupt:
     print("\nテストを終了します。")
