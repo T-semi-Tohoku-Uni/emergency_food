@@ -49,6 +49,20 @@ class ArmController:
         self.servo_ctrl.set_angle(self.right_servo, math.degrees(angle_right_servo))
         self.servo_ctrl.set_angle(self.left_servo, math.degrees(angle_left_servo))
 
+        # 角度を度数法に変換する
+        deg_right = math.degrees(angle_right_servo)
+        deg_left  = math.degrees(angle_left_servo)
+
+        # 左サーボの回転方向が反対のため、180度から引いて反転させる
+        deg_left = 180.0 - deg_left
+
+        # サーボの限界値以内かチェックする
+        deg_right = self._check_angle(deg_right)
+        deg_left  = self._check_angle(deg_left)
+        
+        self.servo_ctrl.set_angle(self.right_servo, deg_right)
+        self.servo_ctrl.set_angle(self.left_servo, deg_left)
+
     def _check_limits(self, length, height):
         # アームの先端のハンドの位置が限界値を超えていないかチェックする
         if self._min_length <= length <= self._max_length and self._min_height <= height <= self._max_height and self._drive_base <= length+height:
@@ -57,5 +71,9 @@ class ArmController:
             # 限界値を超えている場合はエラーを発生させて強制停止する
             raise ValueError(f"エラー: 指定された位置(長さ:{length}mm, 高さ:{height}mm)は物理的な限界値を超えています！")
     
-    def _check_angle(self,angle):
-        pass
+    def _check_angle(self, angle):
+        # サーボの角度が 0〜120度の範囲内か確認する
+        if 0 <= angle <= 120:
+            return angle
+        else:
+            raise ValueError(f"エラー: 計算されたサーボの角度({angle:.1f}度)が可動範囲(0〜120度)を超えています！")
