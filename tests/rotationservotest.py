@@ -1,5 +1,5 @@
 import time
-from i2c_controller import ServoController
+from contollers.i2c_controller import ServoController
 
 def main():
     print("ロボットのシステムを起動します...")

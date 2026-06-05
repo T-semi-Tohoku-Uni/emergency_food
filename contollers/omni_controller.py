@@ -1,17 +1,15 @@
 import time
-from i2c_controller import ServoController
+from contollers.i2c_controller import ServoController
 import math
 
 # 方針
-# アームの伸ばした長さと高さをコードで指定する。
-# 限界値はエラーを出すようにする。
+# その場回転とベクトルとxy方向の速度指定のコードを実装する。
 
-###
-class OmuniSpeed:
-    def __init__(self,front_left=0,front_right=1,rear_left=2,rear_right=3,max_speed = 1.0):
+class OmniSpeed:
+    def __init__(self,front_right=1,front_left=14,rear_left=15,rear_right=0,max_speed = 1.0):
         #speedxy用の変数
-        self.front_left= front_left
         self.front_right = front_right
+        self.front_left= front_left
         self.rear_left = rear_left
         self.rear_right = rear_right
         # サーボコントローラーの初期化
@@ -36,12 +34,18 @@ class OmuniSpeed:
             v_c *= scale
             v_d *= scale
         
-        self.rot_servo.set_speed(self.front_left, v_a)
-        self.rot_servo.set_speed(self.front_right, v_b)
+        # サーボの入力範囲(-1.0 ~ 1.0)に正規化
+        v_a /= self.max_speed
+        v_b /= self.max_speed
+        v_c /= self.max_speed
+        v_d /= self.max_speed
+        
+        self.rot_servo.set_speed(self.front_right, v_a)
+        self.rot_servo.set_speed(self.front_left, v_b)
         self.rot_servo.set_speed(self.rear_left, v_c)
         self.rot_servo.set_speed(self.rear_right, v_d)
 
-        # 前方をy,右向きをxと億
+        # 前方をy,右向きをxと置く
     def Speedxy(self,x,y):
         nx = self.inv_root2 * x
         ny = self.inv_root2 * y
@@ -74,4 +78,14 @@ class OmuniSpeed:
         v_d = omega
 
         self._set_motors(v_a, v_b, v_c, v_d) 
-###
+
+    def Speedxy_rotation(self, x, y, omega):
+        nx = self.inv_root2 * x
+        ny = self.inv_root2 * y
+        # 平行移動の成分と、回転の成分(omega)を足し合わせる
+        v_a = nx - ny + omega
+        v_b = nx + ny + omega
+        v_c = -nx + ny + omega
+        v_d = -nx - ny + omega
+
+        self._set_motors(v_a, v_b, v_c, v_d)
