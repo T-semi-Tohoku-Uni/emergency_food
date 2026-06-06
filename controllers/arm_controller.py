@@ -9,7 +9,7 @@ import math
 # 限界値はエラーを出すようにする。
 
 class ArmController:
-    def __init__(self,right_servo=7,left_servo=8,arm_length_1=80,arm_length_2=80,max_angle=1.0):
+    def __init__(self,right_servo=7,left_servo=8,arm_length_1=80,arm_length_2=80,max_angle=180):
         #channel名の設定
         self.right_servo = right_servo
         self.left_servo = left_servo
@@ -28,8 +28,11 @@ class ArmController:
         self._min_length = 30
         self._drive_base = 30
 
-        # モーターの最大許容速度を定義
         self.max_angle = max_angle
+
+        # 【追加】初期化の最後に、安全な待機姿勢（ホームポジション）に移動させる
+        # 例：前方に100mm、高さ50mmの位置で待機
+        self.set_position(100, 50)
 
     def set_position(self, length, height):
         # アームの長さと高さを指定して動かす
@@ -50,11 +53,11 @@ class ArmController:
         self.servo_ctrl.set_angle(self.left_servo, math.degrees(angle_left_servo))
 
         # 角度を度数法に変換する
-        deg_right = math.degrees(angle_right_servo)
-        deg_left  = math.degrees(angle_left_servo)
+        deg_right = math.degrees(angle_right_servo) + 45
+        deg_left  = math.degrees(angle_left_servo) + 45
 
         # 左サーボの回転方向が反対のため、180度から引いて反転させる
-        deg_left = 180.0 - deg_left
+        deg_right = 180.0 - deg_right
 
         # サーボの限界値以内かチェックする
         deg_right = self._check_angle(deg_right)
@@ -81,7 +84,7 @@ class ArmController:
     
     def _check_angle(self, angle):
         # サーボの角度が 0〜120度の範囲内か確認する
-        if 0 <= angle <= 120:
+        if 0 <= angle <= self.max_angle:
             return angle
         else:
-            raise ValueError(f"エラー: 計算されたサーボの角度({angle:.1f}度)が可動範囲(0〜120度)を超えています！")
+            raise ValueError(f"エラー: 計算されたサーボの角度({angle:.1f}度)が可動範囲(0〜{self.max_angle}度)を超えています！")
