@@ -1,6 +1,6 @@
 import time
-from contollers.i2c_controller import ServoController
-from contollers.omni_controller import OmniSpeed
+from controllers.i2c_controller import ServoController
+from controllers.omni_controller import OmniSpeed
 
 def main():
     print("オムニの動作確認を行います...")

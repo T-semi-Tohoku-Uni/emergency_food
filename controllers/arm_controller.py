@@ -1,5 +1,5 @@
 import time
-from contollers.i2c_controller import ServoController
+from controllers.i2c_controller import ServoController
 import math
 
 # 方針
@@ -64,12 +64,20 @@ class ArmController:
         self.servo_ctrl.set_angle(self.left_servo, deg_left)
 
     def _check_limits(self, length, height):
-        # アームの先端のハンドの位置が限界値を超えていないかチェックする
-        if self._min_length <= length <= self._max_length and self._min_height <= height <= self._max_height and self._drive_base <= length+height:
-            return True
-        else:
-            # 限界値を超えている場合はエラーを発生させて強制停止する
-            raise ValueError(f"エラー: 指定された位置(長さ:{length}mm, 高さ:{height}mm)は物理的な限界値を超えています！")
+        # 1. 指定されたXY座標が設定した矩形エリア内に収まっているかチェック
+        if not (self._min_length <= length <= self._max_length and 
+                self._min_height <= height <= self._max_height and 
+                self._drive_base <= length + height):
+            raise ValueError(f"エラー: 指定された位置(長さ:{length}mm, 高さ:{height}mm)はXY限界値を超えています！")
+            
+        # 2. 【追加】アームの物理的な最大リーチ（到達可能距離）のチェック
+        radius = math.sqrt(length**2 + height**2)
+        max_reach = self.arm_length_1 + self.arm_length_2
+        
+        if radius > max_reach:
+            raise ValueError(f"エラー: 目標地点への直線距離({radius:.1f}mm)が、アームの最大リーチ({max_reach}mm)を超えており物理的に届きません！")
+            
+        return True
     
     def _check_angle(self, angle):
         # サーボの角度が 0〜120度の範囲内か確認する
