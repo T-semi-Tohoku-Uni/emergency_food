@@ -42,19 +42,5 @@ class MoveOmni():
         
         self.omni.Speedxy(x,y)
 
-
-        
-
-        
-
-
-
-
-        
-
-
-
-
-    
     def movepolar(self, r, theta):
         # 前方をr,時計回りにthetaとする

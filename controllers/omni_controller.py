@@ -117,7 +117,7 @@ class OmniSpeed:
 
         pulses[0] =  wheel_rotation_x - wheel_rotation_y
         pulses[1] =  wheel_rotation_x + wheel_rotation_y
-        pulses[2] = -wheel_rotation_x - wheel_rotation_y
+        pulses[2] = -wheel_rotation_x + wheel_rotation_y
         pulses[3] = -wheel_rotation_x - wheel_rotation_y
 
         nom = []
@@ -134,19 +134,32 @@ class OmniSpeed:
             for i in range(4):
                 self.serial.write((self.commands[i] + '\n').encode('utf-8'))
 
-                # 送り返された速度を受信
-                line[i] = float(self.serial.readline().decode('utf-8').strip())
+                # 送り返されたパルス数を受信（エラー処理を追加）
+                raw_data = self.serial.readline().decode('utf-8').strip()
+                try:
+                    line[i] = float(raw_data)
+                except ValueError:
+                    continue # 受信失敗時は前回の値を維持してループを続行
 
-                if math.fabs(pulses[i]-line[i])<50:
-                    nom[i] = nom[i]/2
+                # 目標パルスまでの誤差
+                error = math.fabs(pulses[i] - line[i])
+                if error < 50:
+                    nom[i] = nom[i] / 2.0
             
-            if nom[i]<0.1:
-                trigger[i] =1
+                # 逆回転時(負の値)にも正しく判定できるように絶対値を取る。または誤差が少ない場合
+                if math.fabs(nom[i]) < 0.1 or error < 10:
+                    trigger[i] = 1
+                    nom[i] = 0.0 # 完了した車輪の速度を0にする
             
-            if trigger[0]*trigger[1]*trigger[2]*trigger[3] == 1:
+            if sum(trigger) == 4:
                 break
+        
+        # 最後に全てのモーターを完全に停止させる
+        self._set_motors(0.0, 0.0, 0.0, 0.0)
 
     def normalize(self, n, r):
+        if n == 0:
+            return 0.0
         if math.fabs(n) > 1:
             re = n/math.fabs(n)*r
         else:
