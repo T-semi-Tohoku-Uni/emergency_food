@@ -1,6 +1,11 @@
 import time
-from contollers.i2c_controller import ServoController
+import sys
+import os
+# パスを追加
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
+
 import math
+from contollers.i2c_controller import ServoController
 from contollers.omni_controller import OmniSpeed
 
 class MoveOmni():
@@ -15,7 +20,12 @@ class MoveOmni():
 
         self.inv_root2 = 1.0 / math.sqrt(2)
 
+        self.SERIAL_PORT = "/dev/ttyACM0"
+        self.BAUDRATE = 115200
+
     def movexy(self, x, y, speed=0.5):
+        Serial = Ser(servo_ctrl, port=SERIAL_PORT, baudrate=BAUDRATE)
+
         # 前方をx、右向きをyとする
         wheel_rotation_x = x / self.wheel_size * self.inv_root2 * self.pulues_per_revolution
         wheel_rotation_y = y / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
