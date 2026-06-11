@@ -75,8 +75,6 @@ void loop() {
       buttonState = reading;
       if (buttonState == LOW) { // プルアップ設定のため、LOWが「押された」状態
         Serial.println("Button Pressed!");
-      } else {
-        Serial.println("Button Released!");
       }
     }
   }
