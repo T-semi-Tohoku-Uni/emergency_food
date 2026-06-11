@@ -1,5 +1,5 @@
 import time
-from contollers.i2c_controller import ServoController
+from controllers.i2c_controller import ServoController
 import math
 
 # 方針

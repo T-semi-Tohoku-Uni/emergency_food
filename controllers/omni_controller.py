@@ -1,6 +1,12 @@
 import time
-from contollers.i2c_controller import ServoController
+import sys
+import os
+# パスを追加
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
+
+from controllers.i2c_controller import ServoController
 import math
+import serial
 
 # 方針
 # その場回転とベクトルとxy方向の速度指定のコードを実装する。
@@ -24,12 +30,12 @@ class OmniSpeed:
         self.wheel_size = 42
         self.pulses_per_revolution = pulses_per_revolution
 
-        self.commands[4] = ["stepa","stepb","stepc","stepd"]
+        self.commands = ["stepa","stepb","stepc","stepd"]
 
         self.SERIAL_PORT = "/dev/ttyACM0"
         self.BAUDRATE = 115200
 
-        self.serial = serial.Serial(port, baudrate, timeout=1.0)
+        self.serial = serial.Serial(self.SERIAL_PORT, self.BAUDRATE, timeout=1.0)
         time.sleep(2) # シリアル接続の確立待ち
     
     # モーターへの出力処理を1つのメソッドに共通化
@@ -101,37 +107,37 @@ class OmniSpeed:
 
         self._set_motors(v_a, v_b, v_c, v_d)
 
-    def movexy(self, x, y, speed=0.5):
-        Serial = Ser(servo_ctrl, port=SERIAL_PORT, baudrate=BAUDRATE)
-
+    def Movexy(self, x, y, speed=0.5):
         # 前方をx、右向きをyとする
-        wheel_rotation_x = x / self.wheel_size * self.inv_root2 * self.pulues_per_revolution
+        wheel_rotation_x = x / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
         wheel_rotation_y = y / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
         wheel_rotation = math.sqrt(wheel_rotation_x**2 + wheel_rotation_y**2)
 
-        pulues[4] = []
+        pulses = [0,0,0,0]
 
-        pulues[0] =  wheel_rotation_x - wheel_rotation_y
-        pulues[1] =  wheel_rotation_x + wheel_rotation_y
-        pulues[2] = -wheel_rotation_x - wheel_rotation_y
-        pulues[3] = -wheel_rotation_x - wheel_rotation_y
+        pulses[0] =  wheel_rotation_x - wheel_rotation_y
+        pulses[1] =  wheel_rotation_x + wheel_rotation_y
+        pulses[2] = -wheel_rotation_x - wheel_rotation_y
+        pulses[3] = -wheel_rotation_x - wheel_rotation_y
+
+        nom = []
 
         for i in range(4):
-            nom[i] = normalize(plues[i],speed/wheel_rotation)
+            nom.append(self.normalize(pulses[i],speed))
         
         self.serial.write(("stepinit" + '\n').encode('utf-8'))
 
-        line[4] = []
-        trigger[4] = [0,0,0,0]
+        line = [0,0,0,0]
+        trigger = [0,0,0,0]
         while True:
-            self._set_motors(nom[0],nom[1],nom[2],nomd[3])
+            self._set_motors(nom[0],nom[1],nom[2],nom[3])
             for i in range(4):
                 self.serial.write((self.commands[i] + '\n').encode('utf-8'))
 
                 # 送り返された速度を受信
-                line[i] = self.serial.readline().decode('utf-8').strip()
+                line[i] = float(self.serial.readline().decode('utf-8').strip())
 
-                if abs(pulues[i]-line[i])<50:
+                if math.fabs(pulses[i]-line[i])<50:
                     nom[i] = nom[i]/2
             
             if nom[i]<0.1:
@@ -140,6 +146,9 @@ class OmniSpeed:
             if trigger[0]*trigger[1]*trigger[2]*trigger[3] == 1:
                 break
 
-    def normalize(self, n, r);
-        re = n/math.abs(n)*r
+    def normalize(self, n, r):
+        if math.fabs(n) > 1:
+            re = n/math.fabs(n)*r
+        else:
+            re = n*r
         return re
