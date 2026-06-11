@@ -36,6 +36,12 @@ float current_vel_b = 0.0;
 float current_vel_c = 0.0;
 float current_vel_d = 0.0;
 
+// エンコーダーのステップ数をリセットするためのオフセット変数
+long offset_a = 0;
+long offset_b = 0;
+long offset_c = 0;
+long offset_d = 0;
+
 // ボタンのチャタリング対策用変数
 bool buttonState = HIGH;
 bool lastButtonState = HIGH;
@@ -112,14 +118,20 @@ void loop() {
       led3State = false;
       digitalWrite(LED3_PIN, led3State);
       Serial.println("LED 3 turned off");
+    } else if (cmd == "initstep") {
+      offset_a = current_step_a;
+      offset_b = current_step_b;
+      offset_c = current_step_c;
+      offset_d = current_step_d;
+      Serial.println("Encoder steps reset");
     } else if (cmd == "stepa") {
-      Serial.println(current_step_a); 
+      Serial.println(current_step_a - offset_a); 
     } else if (cmd == "stepb") {
-      Serial.println(current_step_b);
+      Serial.println(current_step_b - offset_b);
     } else if (cmd == "stepc") {
-      Serial.println(current_step_c);
+      Serial.println(current_step_c - offset_c);
     } else if (cmd == "stepd") {
-      Serial.println(current_step_d);
+      Serial.println(current_step_d - offset_d);
     } else if (cmd == "vela") {
       Serial.println(current_vel_a);
     } else if (cmd == "velb") {
