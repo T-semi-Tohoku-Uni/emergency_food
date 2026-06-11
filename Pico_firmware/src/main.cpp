@@ -147,9 +147,9 @@ void loop() {
   unsigned long elapsedTime = currentTime - lastTime;
 
   // 小数誤差を避けるため、経過時間をマイクロ秒（100,000us = 100ms）のまま判定
-  if (elapsedTime >= 100) {
+  if (elapsedTime >= 1000) {
     // 実際の経過時間を元に dt を計算し、速度の計算精度を保つ
-    float dt = elapsedTime / 100.0; 
+    float dt = elapsedTime / 1000.0; 
     // 変更: PIOステートマシンから現在のカウントを取得
     current_step_a = myEncoder_a.getCount();
     current_step_b = myEncoder_b.getCount();

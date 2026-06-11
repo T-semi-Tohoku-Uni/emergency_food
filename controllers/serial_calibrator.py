@@ -65,7 +65,7 @@ class SerialCalibrator:
 
             self.servo_ctrl.set_calibration_offset(channel, offset)
             self.servo_ctrl.set_speed(channel, 0.0)
-            time.sleep(0.5)
+            time.sleep(1)
 
         print("完全な静止には至りませんでしたが、最も近い値で終了します。")
         return offset

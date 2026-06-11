@@ -53,6 +53,12 @@ def calb_rot_servo_all():
             servo_ctrl.set_speed(ch, 0.5)
         time.sleep(2.0)
         
+        final_offsets = calibrator.calibrate_neutral_all(
+            channels=CHANNELS, 
+            command_signals=COMMANDS, 
+            tolerance=0.5
+        )
+
         print("速度 0.0 で全輪を停止させます。完全に静止するか確認してください。")
         for ch in CHANNELS:
             servo_ctrl.set_speed(ch, 0.0)
