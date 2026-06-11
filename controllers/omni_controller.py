@@ -136,19 +136,28 @@ class OmniSpeed:
                 except ValueError:
                     continue # 受信失敗時は前回の値を維持してループを続行
 
-            # 各車輪の目標パルスまでの誤差を計算
-            errors = [math.fabs(pulses[i] - line[i]) for i in range(4)]
-            max_error = max(errors)
+            # 各車輪の目標までの残りパルス数を計算（オーバーシュート時は0とする）
+            remaining_pulses = []
+            for i in range(4):
+                if pulses[i] > 0:
+                    rem = pulses[i] - line[i]
+                elif pulses[i] < 0:
+                    rem = line[i] - pulses[i]
+                else:
+                    rem = 0.0
+                remaining_pulses.append(max(0.0, rem))
+                
+            max_remaining = max(remaining_pulses)
 
-            # 全ての車輪が目標付近（誤差10未満）に到達したら終了
-            if max_error < 10:
+            # 全ての車輪が目標付近（残り10未満）に到達、または通り過ぎたら終了
+            if max_remaining < 10:
                 break
 
             # P制御（比例制御）による減速: 残りパルスが指定値未満になったら徐々に減速
             decel_threshold = 100.0  # 減速を開始する残りパルス数（実機に合わせて調整してください）
             scale = 1.0
-            if max_error < decel_threshold:
-                scale = max(0.15, max_error / decel_threshold) # 最低速度(0.15)を確保して途中停止を防ぐ
+            if max_remaining < decel_threshold:
+                scale = max(0.15, max_remaining / decel_threshold) # 最低速度(0.15)を確保して途中停止を防ぐ
 
             # 4輪の比率を保ったままモーターに出力
             current_nom = [base_nom[i] * scale for i in range(4)]
