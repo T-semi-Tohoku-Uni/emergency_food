@@ -1,7 +1,7 @@
 import time
-import serial
 from contollers.i2c_controller import ServoController
 from contollers.omni_controller import OmniSpeed
+from contollers.serial_controller import SerialController
 from setup_logger import logger
 
 def main():
@@ -15,31 +15,38 @@ def main():
     serial_port = '/dev/ttyACM0' 
     baud_rate = 115200
 
-    try:
-        ser = serial.Serial(serial_port, baud_rate, timeout=0.1)
-        logger.info(f"シリアルポート {serial_port} に接続しました。")
-    except serial.SerialException as e:
-        logger.error(f"シリアルポート接続エラー: {e}")
+    serial_ctrl = SerialController(port=serial_port, baud_rate=baud_rate)
+    if not serial_ctrl.is_open():
         return
 
     logger.info("セットアップが完了しました。シリアルデータの受信を待機します（Ctrl+Cで終了）")
 
     try:
         while True:
-            # 受信バッファにデータがあるか確認
-            if ser.in_waiting > 0:
-                # 1行読み込んで、不要な改行文字を削除
-                line = ser.readline().decode('utf-8', errors='replace').strip()
-                if line:
-                    logger.info(f"受信データ: {line}")
+            # 受信バッファにデータがあるか確認して処理
+            serial_ctrl.check_incoming()
                     
             time.sleep(0.01) # CPU負荷を下げるための短いウェイト
+    
+    
+        
+            # 例として "PING" という特定の信号を送信し、返答を受け取ります
+            # ※実際に相手側が待っている文字列に変更してください
+            reply = serial_ctrl.send_and_receive_command("PING")
+            
+            if reply:
+                # 返答に応じた処理（ロボットの制御など）をここに記述します
+                pass
+            else:
+                logger.warning("返答がありませんでした")
+                
+            # 連続して送信しすぎないよう待機時間を設けます
+            time.sleep(1.0)
 
     except KeyboardInterrupt:
         logger.info("プログラムを終了します。")
     finally:
-        if 'ser' in locals() and ser.is_open:
-            ser.close()
+        serial_ctrl.close()
 
 if __name__ == "__main__":
     main()
