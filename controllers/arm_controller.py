@@ -19,7 +19,7 @@ class ArmController:
         self.arm_length_2 = arm_length_2
 
         # サーボコントローラーの初期化
-        self.servo_ctrl = ServoController()
+        self.servo_ctrl = ServoController(max_angle=180)
 
         # アームの限界値の定義（ここにまとめるのがベストです）
         self._max_height = 90

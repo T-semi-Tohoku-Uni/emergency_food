@@ -5,7 +5,7 @@ from adafruit_pca9685 import PCA9685
 from adafruit_motor import servo
 
 class ServoController:
-    def __init__(self, channels=16):
+    def __init__(self, channels=16,max_angle=180):
         # I2Cバスの初期化
         self.i2c = busio.I2C(SCL, SDA)
         
@@ -14,6 +14,8 @@ class ServoController:
         
         # サーボモーターの標準的な周波数は50Hz
         self.pca.frequency = 50
+
+        self.max_angle = max_angle
         
         # サーボオブジェクトを格納するリスト
         self.servos = []
@@ -34,7 +36,7 @@ class ServoController:
             print(f"Error: チャンネル{channel}はローテーションサーボとして設定されています。")
             return
 
-        if 0 <= angle <= 180:
+        if 0 <= angle <= self.max_angle:
             self.servos[channel].angle = angle
         else:
             print(f"Error: 角度は0から180の間で指定してください (入力値: {angle})")
