@@ -70,7 +70,7 @@ void loop() {
   if (reading != lastButtonState) {
     lastDebounceTime = currentTime;
   }
-  if ((currentTime - lastDebounceTime) > 50) { // 50msのデバウンス時間
+  if ((currentTime - lastDebounceTime) > 30) { // 50msのデバウンス時間
     if (reading != buttonState) {
       buttonState = reading;
       if (buttonState == LOW) { // プルアップ設定のため、LOWが「押された」状態
@@ -81,50 +81,55 @@ void loop() {
     }
   }
   lastButtonState = reading;
-
   // シリアル通信から特定の指令が来たとき返答する
   if (Serial.available() > 0) {
-    char cmd = Serial.read();
-    if (cmd == 'LED1ON') {
+    // 改行コード（Enter）が来るまで文字列としてまとめて読み込む
+    String cmd = Serial.readStringUntil('\n'); 
+    
+    // Windows環境などから送られる見えない改行コード(\r)や空白を取り除く
+    cmd.trim(); 
+
+    // シリアル通信から特定の指令が来たとき返答する
+    if (cmd == "LED1ON") {
       led1State = true;
       digitalWrite(LED1_PIN, led1State);
       Serial.println("LED 1 turned on");
-    } else if (cmd == 'LED1OFF') {
+    } else if (cmd == "LED1OFF") {
       led1State = false;
       digitalWrite(LED1_PIN, led1State);
       Serial.println("LED 1 turned off");
-    } else if(cmd == 'LED2ON') {
+    } else if(cmd == "LED2ON") {
       led2State = true;
       digitalWrite(LED2_PIN, led2State);
       Serial.println("LED 2 turned on");
-    } else if (cmd == 'LED2OFF') {
+    } else if (cmd == "LED2OFF") {
       led2State = false;
       digitalWrite(LED2_PIN, led2State);
       Serial.println("LED 2 turned off");
-    } else if(cmd == 'LED3ON') {
+    } else if(cmd == "LED3ON") {
       led3State = true;
       digitalWrite(LED3_PIN, led3State);
       Serial.println("LED 3 turned on");
-    } else if (cmd == 'LED3OFF') {
+    } else if (cmd == "LED3OFF") {
       led3State = false;
       digitalWrite(LED3_PIN, led3State);
       Serial.println("LED 3 turned off");
-    }else if (cmd == 'step_a') {
-      Serial.print(current_step_a);
-    }else if (cmd == 'step_b') {
-      Serial.print(current_step_b);
-    }else if (cmd == 'step_c') {
-      Serial.print(current_step_c);
-    }else if (cmd == 'step_d') {
-      Serial.print(current_step_d);
-    }else if (cmd == 'vel_a') {
-      Serial.print(current_vel_a);
-    }else if (cmd == 'vel_b') {
-      Serial.print(current_vel_b);
-    }else if (cmd == 'vel_c') {
-      Serial.print(current_vel_c);
-    }else if (cmd == 'vel_d') {
-      Serial.print(current_vel_d);
+    } else if (cmd == "step_a") {
+      Serial.println(current_step_a); // 見やすいようにprintlnに変更することをおすすめします
+    } else if (cmd == "step_b") {
+      Serial.println(current_step_b);
+    } else if (cmd == "step_c") {
+      Serial.println(current_step_c);
+    } else if (cmd == "step_d") {
+      Serial.println(current_step_d);
+    } else if (cmd == "vel_a") {
+      Serial.println(current_vel_a);
+    } else if (cmd == "vel_b") {
+      Serial.println(current_vel_b);
+    } else if (cmd == "vel_c") {
+      Serial.println(current_vel_c);
+    } else if (cmd == "vel_d") {
+      Serial.println(current_vel_d);
     }
   }
 
