@@ -1,17 +1,35 @@
 import time
-from contollers.i2c_controller import ServoController
-from contollers.serial_calibrator import SerialCalibrator
+import sys
+import os
+# パスを追加
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
 
-def main():
+from controllers.i2c_controller import ServoController
+from controllers.serial_calibrator import SerialCalibrator
+
+def calb_rot_servo(wheel=1,channel=1,command="vela"):
     # ==========================================
     # テスト環境の設定（環境に合わせて変更してください）
     # ==========================================
-    SERIAL_PORT = "COM3" # 例: Windows="COM3", Linux/Mac="/dev/ttyUSB0"
+    SERIAL_PORT = "/dev/ttyACM0" # 例: Windows="COM3", Linux/Mac="/dev/ttyUSB0"
     BAUDRATE = 115200
     
     # テスト対象のサーボ設定 (OmniControllerの場合は 0, 1, 14, 15 などを指定)
-    TEST_CHANNEL = 1
-    COMMAND_SIGNAL = "CMD_VEL_1" # マイコン側に送る速度要求コマンド
+    TEST_CHANNEL = channel
+    COMMAND_SIGNAL = command # マイコン側に送る速度要求コマンド
+    if wheel == 1:
+        TEST_CHANNEL = 1
+        COMMAND_SIGNAL = "vela"
+    elif wheel == 2:
+        TEST_CHANNEL = 14
+        COMMAND_SIGNAL = "velb"
+    elif wheel == 3:
+        TEST_CHANNEL = 15
+        COMMAND_SIGNAL = "velc"
+    elif wheel == 4:
+        TEST_CHANNEL = 0
+        COMMAND_SIGNAL = "veld"
+
 
     print("=== キャリブレーションの動作テストを開始します ===")
     
@@ -69,4 +87,7 @@ def main():
             servo_ctrl.cleanup()
 
 if __name__ == "__main__":
-    main()
+    calb_rot_servo(1)
+    calb_rot_servo(2)
+    calb_rot_servo(3)
+    calb_rot_servo(4)

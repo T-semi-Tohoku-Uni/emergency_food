@@ -1,12 +1,16 @@
 import time
 import serial
-from contollers.i2c_controller import ServoController
+from controllers.i2c_controller import ServoController
 
 class SerialCalibrator:
     def __init__(self, servo_ctrl: ServoController, port: str, baudrate: int = 115200):
         """
-        シリアル通信を使ってサーボのキャリブレーションを行うクラス
-        port: シリアルポート（例: "COM3" または "/dev/ttyUSB0"）
+        シリアル通信を使ってサーボのキャリブレーションを行うクラスを初期化
+        
+        Args:
+            servo_ctrl (ServoController): サーボコントローラのインスタンス
+            port (str): シリアルポート（例: "COM3" または "/dev/ttyUSB0"）
+            baudrate (int): ボーレート（デフォルト: 115200）
         """
         self.servo_ctrl = servo_ctrl
         self.serial = serial.Serial(port, baudrate, timeout=1.0)
@@ -14,7 +18,13 @@ class SerialCalibrator:
 
     def get_velocity(self, command_signal: str) -> float:
         """
-        指定した信号をシリアル通信で送り、返ってきた速度を読み取る
+        指定したコマンド信号をシリアル通信で送り、返ってきた速度を読み取る
+        
+        Args:
+            command_signal (str): マイコンに送るコマンド文字列
+        
+        Returns:
+            float: マイコンから返された速度値（失敗時は 0.0）
         """
         # 信号を送信 (改行コードは環境に合わせて調整してください)
         self.serial.write((command_signal + '\n').encode('utf-8'))
@@ -30,7 +40,17 @@ class SerialCalibrator:
     def calibrate_neutral(self, channel: int, command_signal: str, tolerance: float = 0.5):
         """
         サーボの静止点（ニュートラルパルス）をキャリブレーションする
-        速度が許容範囲内(tolerance)に収まるまでオフセットを調整する
+        
+        マイコンに指定コマンドを送り、返ってきた速度がほぼ0になるまで
+        オフセット値を調整する
+        
+        Args:
+            channel (int): キャリブレーション対象チャンネル
+            command_signal (str): マイコンに送るコマンド文字列
+            tolerance (float): 許容誤差（この値以下なら目標達成）
+        
+        Returns:
+            int: 最終的に調整されたオフセット値（マイクロ秒）
         """
         print(f"チャンネル {channel} のニュートラルキャリブレーションを開始します...")
         offset = 0
@@ -64,7 +84,18 @@ class SerialCalibrator:
     def calibrate_speed(self, channel: int, command_signal: str, test_speed: float = 0.5, target_velocity: float = 50.0):
         """
         サーボの回転速度をキャリブレーションする
-        指令値に対する実際の速度を測定し、個体差を補正するためのスケール係数を算出する
+        
+        指定した test_speed で指令を送り、実際の速度を測定して
+        理想速度（target_velocity）に合わせるためのスケール係数を算出する
+        
+        Args:
+            channel (int): キャリブレーション対象チャンネル
+            command_signal (str): マイコンに送るコマンド文字列
+            test_speed (float): テスト時の指令速度（-1.0 ~ 1.0）
+            target_velocity (float): 目標速度（この値に合わせるよう補正）
+        
+        Returns:
+            float: 算出されたスケール係数
         """
         print(f"チャンネル {channel} の速度キャリブレーションを開始します...")
         self.servo_ctrl.set_speed_scale(channel, 1.0) # 一旦スケールをリセット
