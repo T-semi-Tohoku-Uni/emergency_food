@@ -17,6 +17,9 @@ class ServoController:
 
         self.max_angle = max_angle
         
+        # 連続回転サーボの停止点（ニュートラル）オフセットを保持する辞書 (単位: マイクロ秒)
+        self.calibration_offsets = {i: 0 for i in range(channels)}
+
         # サーボオブジェクトを格納するリスト
         self.servos = []
         for i in range(channels):
@@ -24,6 +27,19 @@ class ServoController:
             # デフォルトでは標準サーボとして初期化しておく
             s = servo.Servo(self.pca.channels[i], min_pulse=500, max_pulse=2400)
             self.servos.append(s)
+
+    def set_calibration_offset(self, channel, offset_us):
+        """
+        ローテーションサーボの停止点（ニュートラル位置）のずれをマイクロ秒単位で補正する
+        channel: 0 ~ 15
+        offset_us: ずらす量（例: 停止点が1520usなら +20 を指定）
+        """
+        self.calibration_offsets[channel] = offset_us
+        # 既にContinuousServoとして初期化されている場合は、新しいオフセットで再設定
+        if isinstance(self.servos[channel], servo.ContinuousServo):
+            self.servos[channel] = servo.ContinuousServo(
+                self.pca.channels[channel], min_pulse=700 + offset_us, max_pulse=2300 + offset_us
+            )
 
     def set_angle(self, channel, angle):
         """
@@ -49,8 +65,9 @@ class ServoController:
         """
         # 初回呼び出し時に標準サーボオブジェクトをContinuousServoに置き換える
         if not isinstance(self.servos[channel], servo.ContinuousServo):
+            offset = self.calibration_offsets[channel]
             self.servos[channel] = servo.ContinuousServo(
-                self.pca.channels[channel], min_pulse=700, max_pulse=2300
+                self.pca.channels[channel], min_pulse=700 + offset, max_pulse=2300 + offset
             )
 
         # 速度を設定 (throttleプロパティを使用)
