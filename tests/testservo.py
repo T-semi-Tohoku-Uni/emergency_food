@@ -15,7 +15,7 @@ def main():
 
     try:
         # 例：PCA9685の「0番」ピンに繋いだサーボを動かすテスト
-        target_channel = 7
+        target_channel = 9
 
         print("0度へ移動")
         servo_ctrl.set_angle(target_channel, 0)

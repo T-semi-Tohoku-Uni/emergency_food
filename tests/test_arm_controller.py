@@ -20,21 +20,21 @@ def test_arm_controller():
         time.sleep(5) # サーボの移動を待機
 
         # 2. 正常値のテスト（安全な範囲内）
-        test_len1, test_height1 = 60, 70
+        test_len1, test_height1 = 120, 40
         print(f"\n[テスト2] 正常な位置への移動 (長さ: {test_len1}mm, 高さ: {test_height1}mm)")
         arm.set_position(test_len1, test_height1)
         print("結果: 成功 (エラーなし)")
         time.sleep(5) # サーボの移動を待機
 
         # 3. 正常値のテスト（境界値付近）
-        test_len2, test_height2 = 70, 60
+        test_len2, test_height2 = 130, 50
         print(f"\n[テスト3] 正常な位置への移動 (長さ: {test_len2}mm, 高さ: {test_height2}mm)")
         arm.set_position(test_len2, test_height2)
         print("結果: 成功 (エラーなし)")
         time.sleep(5)
 
         # 4. エラー処理のテスト（長さの上限オーバー）
-        test_len3, test_height3 = 130, 55
+        test_len3, test_height3 = 140, 20
         print(f"\n[テスト4] 限界値オーバーのテスト (長さ: {test_len3}mm, 高さ: {test_height3}mm)")
         try:
             arm.set_position(test_len3, test_height3)
@@ -44,7 +44,7 @@ def test_arm_controller():
         time.sleep(5)
 
         # 5. エラー処理のテスト（高さの下限アンダー）
-        test_len4, test_height4 = 130, 57
+        test_len4, test_height4 = 150, 10
         print(f"\n[テスト5] 限界値アンダーのテスト (長さ: {test_len4}mm, 高さ: {test_height4}mm)")
         try:
             arm.set_position(test_len4, test_height4)
