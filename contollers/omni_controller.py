@@ -24,6 +24,8 @@ class OmniSpeed:
         self.wheel_size = 42
         self.pulses_per_revolution = pulses_per_revolution
 
+        self.commands[4] = ["stepa","stepb","stepc","stepd"]
+
         self.SERIAL_PORT = "/dev/ttyACM0"
         self.BAUDRATE = 115200
 
@@ -107,20 +109,37 @@ class OmniSpeed:
         wheel_rotation_y = y / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
         wheel_rotation = math.sqrt(wheel_rotation_x**2 + wheel_rotation_y**2)
 
-        pulues_a =  wheel_rotation_x - wheel_rotation_y
-        pulues_b =  wheel_rotation_x + wheel_rotation_y
-        pulues_c = -wheel_rotation_x - wheel_rotation_y
-        pulues_d = -wheel_rotation_x - wheel_rotation_y
+        pulues[4] = []
 
-        noma = normalize(plues_a,speed/wheel_rotation)
-        nomb = normalize(plues_b,speed/wheel_rotation)
-        nomc = normalize(plues_c,speed/wheel_rotation)
-        nomd = normalize(plues_d,speed/wheel_rotation)
-        
-        self._set_motors(noma,nomb,nomc,nomd)
+        pulues[0] =  wheel_rotation_x - wheel_rotation_y
+        pulues[1] =  wheel_rotation_x + wheel_rotation_y
+        pulues[2] = -wheel_rotation_x - wheel_rotation_y
+        pulues[3] = -wheel_rotation_x - wheel_rotation_y
 
+        for i in range(4):
+            nom[i] = normalize(plues[i],speed/wheel_rotation)
         
-    
+        self.serial.write(("stepinit" + '\n').encode('utf-8'))
+
+        line[4] = []
+        trigger[4] = [0,0,0,0]
+        while True:
+            self._set_motors(nom[0],nom[1],nom[2],nomd[3])
+            for i in range(4):
+                self.serial.write((self.commands[i] + '\n').encode('utf-8'))
+
+                # 送り返された速度を受信
+                line[i] = self.serial.readline().decode('utf-8').strip()
+
+                if abs(pulues[i]-line[i])<50:
+                    nom[i] = nom[i]/2
+            
+            if nom[i]<0.1:
+                trigger[i] =1
+            
+            if trigger[0]*trigger[1]*trigger[2]*trigger[3] == 1:
+                break
+
     def normalize(self, n, r);
         re = n/math.abs(n)*r
         return re

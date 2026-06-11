@@ -26,6 +26,8 @@ class MoveOmni():
         self.serial = serial.Serial(port, baudrate, timeout=1.0)
         time.sleep(2) # シリアル接続の確立待ち
 
+        
+
     def movexy(self, x, y, speed=0.5):
         Serial = Ser(servo_ctrl, port=SERIAL_PORT, baudrate=BAUDRATE)
 
@@ -39,6 +41,9 @@ class MoveOmni():
         pulues_d = -wheel_rotation_x - wheel_rotation_y
         
         self.omni.Speedxy(x,y)
+
+
+        
 
         
 
