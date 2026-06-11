@@ -3,7 +3,7 @@ from contollers.i2c_controller import ServoController
 import math
 from contollers.omni_controller import OmniSpeed
 
-class MoveOmnu():
+class MoveOmni():
     def __init__(self, wheel_size = 42, pulses_per_revolution = 24*4):
         
         # クラスの初期化
@@ -13,12 +13,21 @@ class MoveOmnu():
         self.wheel_size = 42
         self.pulses_per_revolution = pulses_per_revolution
 
+        self.inv_root2 = 1.0 / math.sqrt(2)
+
     def movexy(self, x, y, speed=0.5):
         # 前方をx、右向きをyとする
-        wheel_rotation_x = x / self.wheel_size
-        wheel_rotation_y = y / self.wheel_size
+        wheel_rotation_x = x / self.wheel_size * self.inv_root2 * self.pulues_per_revolution
+        wheel_rotation_y = y / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
 
-        self.omni.Speedxy
+        pulues_a =  wheel_rotation_x - wheel_rotation_y
+        pulues_b =  wheel_rotation_x + wheel_rotation_y
+        pulues_c = -wheel_rotation_x - wheel_rotation_y
+        pulues_d = -wheel_rotation_x - wheel_rotation_y
+        
+        self.omni.Speedxy(x,y)
+
+        
 
 
 
