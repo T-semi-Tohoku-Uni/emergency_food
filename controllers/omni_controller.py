@@ -133,7 +133,7 @@ class OmniSpeed:
                 self.serial.write((self.commands[i] + '\n').encode('utf-8'))
 
                 raw_data = self.serial.readline().decode('utf-8').strip()
-                
+                print(str(self.commands[i])+str(raw_data))
                 if not raw_data:
                     # print(f"[警告] {self.commands[i]} の返答が空(タイムアウト)です")
                     continue
@@ -169,6 +169,8 @@ class OmniSpeed:
             # 4輪の比率を保ったままモーターに出力
             current_nom = [base_nom[i] * scale for i in range(4)]
             self._set_motors(*current_nom)
+
+            time.sleep(0.5)
         
         # 最後に全てのモーターを完全に停止させる
         self._set_motors(0.0, 0.0, 0.0, 0.0)
