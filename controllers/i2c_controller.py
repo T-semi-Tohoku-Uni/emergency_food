@@ -5,7 +5,7 @@ from adafruit_pca9685 import PCA9685
 from adafruit_motor import servo
 
 class ServoController:
-    def __init__(self, channels=16):
+    def __init__(self, channels=16,max_angle=180):
         # I2Cバスの初期化
         self.i2c = busio.I2C(SCL, SDA)
         
@@ -14,7 +14,15 @@ class ServoController:
         
         # サーボモーターの標準的な周波数は50Hz
         self.pca.frequency = 50
+
+        self.max_angle = max_angle
         
+        # 連続回転サーボの停止点（ニュートラル）オフセットを保持する辞書 (単位: マイクロ秒)
+        self.calibration_offsets = {i: 0 for i in range(channels)}
+
+        # 連続回転サーボの回転速度の個体差を補正するスケール係数を保持する辞書
+        self.speed_scales = {i: 1.0 for i in range(channels)}
+
         # サーボオブジェクトを格納するリスト
         self.servos = []
         for i in range(channels):
@@ -22,6 +30,27 @@ class ServoController:
             # デフォルトでは標準サーボとして初期化しておく
             s = servo.Servo(self.pca.channels[i], min_pulse=500, max_pulse=2400)
             self.servos.append(s)
+
+    def set_calibration_offset(self, channel, offset_us):
+        """
+        ローテーションサーボの停止点（ニュートラル位置）のずれをマイクロ秒単位で補正する
+        channel: 0 ~ 15
+        offset_us: ずらす量（例: 停止点が1520usなら +20 を指定）
+        """
+        self.calibration_offsets[channel] = offset_us
+        # 既にContinuousServoとして初期化されている場合は、新しいオフセットで再設定
+        if isinstance(self.servos[channel], servo.ContinuousServo):
+            self.servos[channel] = servo.ContinuousServo(
+                self.pca.channels[channel], min_pulse=700 + offset_us, max_pulse=2300 + offset_us
+            )
+
+    def set_speed_scale(self, channel, scale):
+        """
+        ローテーションサーボの回転速度の個体差を補正する係数を設定する
+        channel: 0 ~ 15
+        scale: 補正係数（例: 1.05 や 0.95）
+        """
+        self.speed_scales[channel] = scale
 
     def set_angle(self, channel, angle):
         """
@@ -34,7 +63,7 @@ class ServoController:
             print(f"Error: チャンネル{channel}はローテーションサーボとして設定されています。")
             return
 
-        if 0 <= angle <= 180:
+        if 0 <= angle <= self.max_angle:
             self.servos[channel].angle = angle
         else:
             print(f"Error: 角度は0から180の間で指定してください (入力値: {angle})")
@@ -47,13 +76,17 @@ class ServoController:
         """
         # 初回呼び出し時に標準サーボオブジェクトをContinuousServoに置き換える
         if not isinstance(self.servos[channel], servo.ContinuousServo):
+            offset = self.calibration_offsets[channel]
             self.servos[channel] = servo.ContinuousServo(
-                self.pca.channels[channel], min_pulse=700, max_pulse=2300
+                self.pca.channels[channel], min_pulse=700 + offset, max_pulse=2300 + offset
             )
 
         # 速度を設定 (throttleプロパティを使用)
+        # スケール補正を適用し、最大/最小値の範囲(-1.0 ~ 1.0)に制限する
         if -1.0 <= speed <= 1.0:
-            self.servos[channel].throttle = speed
+            adjusted_speed = speed * self.speed_scales[channel]
+            adjusted_speed = max(-1.0, min(1.0, adjusted_speed))
+            self.servos[channel].throttle = adjusted_speed
         else:
             print(f"Error: 速度は-1.0から1.0の間で指定してください (入力値: {speed})")
 
