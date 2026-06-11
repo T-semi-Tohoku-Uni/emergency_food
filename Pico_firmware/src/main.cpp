@@ -90,45 +90,45 @@ void loop() {
     cmd.trim(); 
 
     // シリアル通信から特定の指令が来たとき返答する
-    if (cmd == "LED1ON") {
+    if (cmd == "led1on") {
       led1State = true;
       digitalWrite(LED1_PIN, led1State);
       Serial.println("LED 1 turned on");
-    } else if (cmd == "LED1OFF") {
+    } else if (cmd == "led1off") {
       led1State = false;
       digitalWrite(LED1_PIN, led1State);
       Serial.println("LED 1 turned off");
-    } else if(cmd == "LED2ON") {
+    } else if(cmd == "led2on") {
       led2State = true;
       digitalWrite(LED2_PIN, led2State);
       Serial.println("LED 2 turned on");
-    } else if (cmd == "LED2OFF") {
+    } else if (cmd == "led2off") {
       led2State = false;
       digitalWrite(LED2_PIN, led2State);
       Serial.println("LED 2 turned off");
-    } else if(cmd == "LED3ON") {
+    } else if(cmd == "led3on") {
       led3State = true;
       digitalWrite(LED3_PIN, led3State);
       Serial.println("LED 3 turned on");
-    } else if (cmd == "LED3OFF") {
+    } else if (cmd == "led3off") {
       led3State = false;
       digitalWrite(LED3_PIN, led3State);
       Serial.println("LED 3 turned off");
-    } else if (cmd == "step_a") {
-      Serial.println(current_step_a); // 見やすいようにprintlnに変更することをおすすめします
-    } else if (cmd == "step_b") {
+    } else if (cmd == "stepa") {
+      Serial.println(current_step_a); 
+    } else if (cmd == "stepb") {
       Serial.println(current_step_b);
-    } else if (cmd == "step_c") {
+    } else if (cmd == "stepc") {
       Serial.println(current_step_c);
-    } else if (cmd == "step_d") {
+    } else if (cmd == "stepd") {
       Serial.println(current_step_d);
-    } else if (cmd == "vel_a") {
+    } else if (cmd == "vela") {
       Serial.println(current_vel_a);
-    } else if (cmd == "vel_b") {
+    } else if (cmd == "velb") {
       Serial.println(current_vel_b);
-    } else if (cmd == "vel_c") {
+    } else if (cmd == "velc") {
       Serial.println(current_vel_c);
-    } else if (cmd == "vel_d") {
+    } else if (cmd == "veld") {
       Serial.println(current_vel_d);
     }
   }
