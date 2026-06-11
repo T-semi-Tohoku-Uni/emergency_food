@@ -23,6 +23,9 @@ class MoveOmni():
         self.SERIAL_PORT = "/dev/ttyACM0"
         self.BAUDRATE = 115200
 
+        self.serial = serial.Serial(port, baudrate, timeout=1.0)
+        time.sleep(2) # シリアル接続の確立待ち
+
     def movexy(self, x, y, speed=0.5):
         Serial = Ser(servo_ctrl, port=SERIAL_PORT, baudrate=BAUDRATE)
 

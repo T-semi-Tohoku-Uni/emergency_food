@@ -6,7 +6,7 @@ import math
 # その場回転とベクトルとxy方向の速度指定のコードを実装する。
 
 class OmniSpeed:
-    def __init__(self,front_right=1,front_left=14,rear_left=15,rear_right=0,max_speed = 1.0):
+    def __init__(self,front_right=1,front_left=14,rear_left=15,rear_right=0,max_speed = 1.0, wheel_size = 42, pulses_per_revolution = 24*4):
         #speedxy用の変数
         self.front_right = front_right
         self.front_left= front_left
@@ -20,6 +20,15 @@ class OmniSpeed:
 
         # モーターの最大許容速度を定義
         self.max_speed = max_speed
+
+        self.wheel_size = 42
+        self.pulses_per_revolution = pulses_per_revolution
+
+        self.SERIAL_PORT = "/dev/ttyACM0"
+        self.BAUDRATE = 115200
+
+        self.serial = serial.Serial(port, baudrate, timeout=1.0)
+        time.sleep(2) # シリアル接続の確立待ち
     
     # モーターへの出力処理を1つのメソッドに共通化
     def _set_motors(self, v_a, v_b, v_c, v_d):
@@ -89,3 +98,29 @@ class OmniSpeed:
         v_d = -nx - ny + omega
 
         self._set_motors(v_a, v_b, v_c, v_d)
+
+    def movexy(self, x, y, speed=0.5):
+        Serial = Ser(servo_ctrl, port=SERIAL_PORT, baudrate=BAUDRATE)
+
+        # 前方をx、右向きをyとする
+        wheel_rotation_x = x / self.wheel_size * self.inv_root2 * self.pulues_per_revolution
+        wheel_rotation_y = y / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
+        wheel_rotation = math.sqrt(wheel_rotation_x**2 + wheel_rotation_y**2)
+
+        pulues_a =  wheel_rotation_x - wheel_rotation_y
+        pulues_b =  wheel_rotation_x + wheel_rotation_y
+        pulues_c = -wheel_rotation_x - wheel_rotation_y
+        pulues_d = -wheel_rotation_x - wheel_rotation_y
+
+        noma = normalize(plues_a,speed/wheel_rotation)
+        nomb = normalize(plues_b,speed/wheel_rotation)
+        nomc = normalize(plues_c,speed/wheel_rotation)
+        nomd = normalize(plues_d,speed/wheel_rotation)
+        
+        self._set_motors(noma,nomb,nomc,nomd)
+
+        
+    
+    def normalize(self, n, r);
+        re = n/math.abs(n)*r
+        return re
