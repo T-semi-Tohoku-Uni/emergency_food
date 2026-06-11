@@ -111,7 +111,6 @@ class OmniSpeed:
         # 前方をx、右向きをyとする
         wheel_rotation_x = x / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
         wheel_rotation_y = y / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
-        wheel_rotation = math.sqrt(wheel_rotation_x**2 + wheel_rotation_y**2)
 
         pulses = [0,0,0,0]
 
@@ -120,17 +119,13 @@ class OmniSpeed:
         pulses[2] = -wheel_rotation_x + wheel_rotation_y
         pulses[3] = -wheel_rotation_x - wheel_rotation_y
 
-        nom = []
-
-        for i in range(4):
-            nom.append(self.normalize(pulses[i],speed))
+        # 各車輪の基準となる速度（比率を維持した最大速度）
+        base_nom = [self.normalize(pulses[i], speed) for i in range(4)]
         
         self.serial.write(("stepinit" + '\n').encode('utf-8'))
 
         line = [0,0,0,0]
-        trigger = [0,0,0,0]
         while True:
-            self._set_motors(nom[0],nom[1],nom[2],nom[3])
             for i in range(4):
                 self.serial.write((self.commands[i] + '\n').encode('utf-8'))
 
@@ -141,18 +136,23 @@ class OmniSpeed:
                 except ValueError:
                     continue # 受信失敗時は前回の値を維持してループを続行
 
-                # 目標パルスまでの誤差
-                error = math.fabs(pulses[i] - line[i])
-                if error < 50:
-                    nom[i] = nom[i] / 2.0
-            
-                # 逆回転時(負の値)にも正しく判定できるように絶対値を取る。または誤差が少ない場合
-                if math.fabs(nom[i]) < 0.1 or error < 10:
-                    trigger[i] = 1
-                    nom[i] = 0.0 # 完了した車輪の速度を0にする
-            
-            if sum(trigger) == 4:
+            # 各車輪の目標パルスまでの誤差を計算
+            errors = [math.fabs(pulses[i] - line[i]) for i in range(4)]
+            max_error = max(errors)
+
+            # 全ての車輪が目標付近（誤差10未満）に到達したら終了
+            if max_error < 10:
                 break
+
+            # P制御（比例制御）による減速: 残りパルスが指定値未満になったら徐々に減速
+            decel_threshold = 100.0  # 減速を開始する残りパルス数（実機に合わせて調整してください）
+            scale = 1.0
+            if max_error < decel_threshold:
+                scale = max(0.15, max_error / decel_threshold) # 最低速度(0.15)を確保して途中停止を防ぐ
+
+            # 4輪の比率を保ったままモーターに出力
+            current_nom = [base_nom[i] * scale for i in range(4)]
+            self._set_motors(*current_nom)
         
         # 最後に全てのモーターを完全に停止させる
         self._set_motors(0.0, 0.0, 0.0, 0.0)
