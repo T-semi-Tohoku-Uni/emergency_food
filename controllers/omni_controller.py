@@ -126,32 +126,22 @@ class OmniSpeed:
 
         line = [0,0,0,0]
         while True:
+            # 通信のズレを防ぐため、1サイクル（4輪分）の通信を始める直前にバッファをクリア
+            self.serial.reset_input_buffer()
+            
             for i in range(4):
-                # 1. 送信前に受信バッファに残っている古いデータを消去してズレを防ぐ
-                self.serial.reset_input_buffer()
-                
-                # 2. コマンドを送信
                 self.serial.write((self.commands[i] + '\n').encode('utf-8'))
-                
-                # 3. 少しだけ待つ（Pico側が確実に処理して返答を返すための余裕）
-                time.sleep(0.01)
 
-                # 4. 返答を受信
                 raw_data = self.serial.readline().decode('utf-8').strip()
                 
-                # ★デバッグ: 実際に何を受け取っているかコンソールに表示
-                # print(f"[{self.commands[i]}] 受信データ: '{raw_data}'")
-
                 if not raw_data:
-                    print(f"[警告] {self.commands[i]} の返答が空(タイムアウト)です")
+                    # print(f"[警告] {self.commands[i]} の返答が空(タイムアウト)です")
                     continue
 
-                # 送り返されたパルス数を受信（エラー処理を追加）
-                #print(raw_data)
                 try:
                     line[i] = float(raw_data)
                 except ValueError:
-                    continue # 受信失敗時は前回の値を維持してループを続行
+                    continue
 
             # 各車輪の目標までの残りパルス数を計算（オーバーシュート時は0とする）
             remaining_pulses = []
