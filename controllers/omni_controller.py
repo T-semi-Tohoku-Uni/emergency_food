@@ -122,7 +122,7 @@ class OmniSpeed:
         # 各車輪の基準となる速度（比率を維持した最大速度）
         base_nom = [self.normalize(pulses[i], speed) for i in range(4)]
         
-        self.serial.write(("stepinit" + '\n').encode('utf-8'))
+        self.serial.write(("initstep" + '\n').encode('utf-8'))
 
         line = [0,0,0,0]
         while True:
