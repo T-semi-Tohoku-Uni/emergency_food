@@ -69,7 +69,7 @@ def main():
     except KeyboardInterrupt:
         print("\nプログラムを終了します。モーターを停止します。")
         # 終了時にモーターを安全に停止
-        omni.Speedxy(0, 0)
+        omni.Speedxy(0, 0, smooth=False)
 
 if __name__ == "__main__":
     main()

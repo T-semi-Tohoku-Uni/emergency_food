@@ -20,6 +20,10 @@ class OmniSpeed:
         self.rear_right = rear_right
         # サーボコントローラーの初期化
         self.rot_servo = ServoController()
+        
+        # モーターの滑らかな加減速（スルーレート制限）用の変数
+        self.current_speeds = [0.0, 0.0, 0.0, 0.0]
+        self.max_accel = 0.05  # 1回の更新で許容する最大変化量（小さいほど滑らかになる）
 
         ## 1/√2の計算
         self.inv_root2 = 1.0 / math.sqrt(2)
@@ -42,7 +46,7 @@ class OmniSpeed:
             time.sleep(2) # シリアル接続の確立待ち
     
     # モーターへの出力処理を1つのメソッドに共通化
-    def _set_motors(self, v_a, v_b, v_c, v_d):
+    def _set_motors(self, v_a, v_b, v_c, v_d, smooth=False):
         # 4つの車輪の速度のうち、絶対値の最大値を求める
         max_val = max(abs(v_a), abs(v_b), abs(v_c), abs(v_d))
         
@@ -55,18 +59,32 @@ class OmniSpeed:
             v_d *= scale
         
         # サーボの入力範囲(-1.0 ~ 1.0)に正規化
-        v_a /= self.max_speed
-        v_b /= self.max_speed
-        v_c /= self.max_speed
-        v_d /= self.max_speed
+        targets = [
+            v_a / self.max_speed,
+            v_b / self.max_speed,
+            v_c / self.max_speed,
+            v_d / self.max_speed
+        ]
         
-        self.rot_servo.set_speed(self.front_right, v_a)
-        self.rot_servo.set_speed(self.front_left, v_b)
-        self.rot_servo.set_speed(self.rear_left, v_c)
-        self.rot_servo.set_speed(self.rear_right, v_d)
+        # 滑らかな加減速処理（スルーレート制限）
+        if smooth:
+            for i in range(4):
+                diff = targets[i] - self.current_speeds[i]
+                if diff > self.max_accel:
+                    targets[i] = self.current_speeds[i] + self.max_accel
+                elif diff < -self.max_accel:
+                    targets[i] = self.current_speeds[i] - self.max_accel
+                    
+        # 現在の速度として記録
+        self.current_speeds = list(targets)
+        
+        self.rot_servo.set_speed(self.front_right, self.current_speeds[0])
+        self.rot_servo.set_speed(self.front_left, self.current_speeds[1])
+        self.rot_servo.set_speed(self.rear_left, self.current_speeds[2])
+        self.rot_servo.set_speed(self.rear_right, self.current_speeds[3])
 
         # 前方をy,右向きをxと置く
-    def Speedxy(self,x,y):
+    def Speedxy(self, x, y, smooth=True):
         nx = self.inv_root2 * x
         ny = self.inv_root2 * y
 
@@ -75,11 +93,11 @@ class OmniSpeed:
         v_c = -nx + ny
         v_d = -nx - ny
         
-        self._set_motors(v_a, v_b, v_c, v_d)       
+        self._set_motors(v_a, v_b, v_c, v_d, smooth=smooth)       
 
 
     #前方向からの角度をphiとおく、
-    def SpeedPolar(self,v,phi):
+    def SpeedPolar(self, v, phi, smooth=True):
         rad = math.radians(phi)
         nx = v * self.inv_root2 * math.sin(rad)
         ny = v * self.inv_root2 * math.cos(rad)
@@ -89,17 +107,17 @@ class OmniSpeed:
         v_c = -nx + ny
         v_d = -nx - ny
         
-        self._set_motors(v_a, v_b, v_c, v_d)
+        self._set_motors(v_a, v_b, v_c, v_d, smooth=smooth)
     
-    def rotation(self,omega):
+    def rotation(self, omega, smooth=True):
         v_a = omega
         v_b = omega
         v_c = omega
         v_d = omega
 
-        self._set_motors(v_a, v_b, v_c, v_d) 
+        self._set_motors(v_a, v_b, v_c, v_d, smooth=smooth) 
 
-    def Speedxy_rotation(self, x, y, omega):
+    def Speedxy_rotation(self, x, y, omega, smooth=True):
         nx = self.inv_root2 * x
         ny = self.inv_root2 * y
         # 平行移動の成分と、回転の成分(omega)を足し合わせる
@@ -108,7 +126,7 @@ class OmniSpeed:
         v_c = -nx + ny + omega
         v_d = -nx - ny + omega
 
-        self._set_motors(v_a, v_b, v_c, v_d)
+        self._set_motors(v_a, v_b, v_c, v_d, smooth=smooth)
 
     def Movexy(self, x, y, speed=0.5):
         # 前方をx、右向きをyとする
@@ -117,9 +135,9 @@ class OmniSpeed:
 
         pulses = [0,0,0,0]
 
-        pulses[0] =  wheel_rotation_x - wheel_rotation_y
+        pulses[0] = -wheel_rotation_x + wheel_rotation_y
         pulses[1] =  wheel_rotation_x + wheel_rotation_y
-        pulses[2] = -wheel_rotation_x + wheel_rotation_y
+        pulses[2] =  wheel_rotation_x - wheel_rotation_y
         pulses[3] = -wheel_rotation_x - wheel_rotation_y
 
         # 各車輪の基準となる速度（比率を維持した最大速度）
@@ -135,12 +153,14 @@ class OmniSpeed:
             for i in range(4):
                 self.serial.write((self.commands[i] + '\n').encode('utf-8'))
 
+                time.sleep(0.5)
+
                 raw_data = self.serial.readline().decode('utf-8').strip()
                 print(str(self.commands[i])+str(raw_data))
                 if not raw_data:
                     # print(f"[警告] {self.commands[i]} の返答が空(タイムアウト)です")
                     continue
-
+                
                 try:
                     line[i] = float(raw_data)
                 except ValueError:

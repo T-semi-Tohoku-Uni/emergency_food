@@ -8,7 +8,7 @@ from setup_logger import logger
 from controllers.line_detector import detect_line
 
 class LineTracer:
-    def __init__(self, omni, serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=1.0, debug=False):
+    def __init__(self, omni, serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=5.0, debug=False):
         """
         ライントレースを実行するクラス
         omni: OmniSpeedインスタンス
@@ -87,6 +87,11 @@ class LineTracer:
                     if cross:
                         self.stop()
                         continue
+                    else:
+                        # 交差点通過中は横線の影響を無視するため、姿勢制御(PID)を行わず直進のみとする
+                        self.omni.Speedxy_rotation(0, self.base_speed, 0.0)
+                        time.sleep(0.01)
+                        continue
 
                 # 画像の中心からのズレを算出
                 diff = cx - self.center_x
@@ -117,9 +122,10 @@ class LineTracer:
                 # 線が見つからない場合は安全のため停止
                 self.integral = 0.0
                 self.last_diff = 0.0
-                self.omni.Speedxy(0, 0)
+                self.omni.Speedxy(0, 0, smooth=False)
                 
-            time.sleep(0.05)
+            # サンプリング周期を上げるため待機時間を短縮（0.05 -> 0.01）
+            time.sleep(0.01)
 
         # ループを抜けた後（ライントレース終了時）に必ずモーターを停止させる
-        self.omni.Speedxy(0, 0)
+        self.omni.Speedxy(0, 0, smooth=False)

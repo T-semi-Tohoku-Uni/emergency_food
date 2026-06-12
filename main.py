@@ -1,4 +1,6 @@
 import time
+import os
+import argparse
 from controllers.i2c_controller import ServoController
 from controllers.omni_controller import OmniSpeed
 from controllers.serial_controller import SerialController
@@ -10,6 +12,10 @@ from controllers.line_tracer import LineTracer
 from setup_logger import logger
 
 def main():
+    parser = argparse.ArgumentParser(description="ロボットのメインプログラム")
+    parser.add_argument('--force-calibrate', action='store_true', help='保存されたデータがあっても強制的にキャリブレーションを実行する')
+    args = parser.parse_args()
+
     logger.info("セットアップを行います")
 
     # シリアル通信の初期化 (環境に合わせてポート名を変更してください。例: Windowsなら 'COM3', Linuxなら '/dev/ttyACM0')
@@ -22,24 +28,57 @@ def main():
     serial_ctrl = SerialController(port=serial_port, baud_rate=baud_rate)
     if not serial_ctrl.is_open():
         return
+    
+    servo_ctrl=ServoController()
 
     # オムニとアームの初期化 (開いたシリアル通信を渡す)
     omni = OmniSpeed(serial_instance=serial_ctrl.ser)
     arm = ArmController()
     #mov = MoveOmni()
 
-    processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop=(0, 240, 3280, 240))
+    arm.set_position(140,30)
 
-    # --- キャリブレーションの実行（完全停止の調整） ---
-    logger.info("サーボモーターのニュートラル（完全停止点）キャリブレーションを開始します...")
-    calibrator = SerialCalibrator(servo_ctrl=omni.rot_servo, serial_instance=serial_ctrl.ser)
-    
-    channels = [omni.front_right, omni.front_left, omni.rear_left, omni.rear_right]
-    commands = ["vela", "velb", "velc", "veld"]
-    
-    # 全輪の停止点を自動調整 (Pico側のエンコーダー速度を読み取って停止点を探します)
-    calibrator.calibrate_neutral_all(channels, commands, tolerance=0.5)
-    logger.info("キャリブレーションが完了し、完全停止のオフセットが設定されました。")
+    processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop=(0, 240, 1200, 240))
+
+    CHANNELS = [1, 14, 15, 0]
+    COMMANDS = ["vela", "velb", "velc", "veld"]
+
+    calib_file = "calibration_data.json"
+
+    # 保存済みのキャリブレーションデータが存在する場合は読み込む
+    if os.path.exists(calib_file) and not args.force_calibrate:
+        logger.info(f"保存されたキャリブレーションデータ ({calib_file}) を読み込みます。")
+        omni.rot_servo.load_calibration(calib_file)
+    else:
+        # --- キャリブレーションの実行 ---
+        if args.force_calibrate:
+            logger.info("強制キャリブレーションが指定されました。自動キャリブレーションを開始します...")
+        else:
+            logger.info("キャリブレーションデータが見つからないため、自動キャリブレーションを開始します...")
+        calibrator = SerialCalibrator(servo_ctrl=omni.rot_servo, serial_instance=serial_ctrl.ser)
+        
+        calibrator.calibrate_neutral_all(CHANNELS, COMMANDS, tolerance=0.5)
+        logger.info("ニュートラル調整が完了しました。")
+
+        final_scales_fw, final_scales_bw = calibrator.calibrate_speed_all(
+            channels=CHANNELS, command_signals=COMMANDS, test_speed=0.5, target_velocity=30.0
+        )
+        logger.info(f"速度スケール -> 正転: {final_scales_fw}, 逆転: {final_scales_bw}")
+
+        # 最後に再調整して結果を保存
+        calibrator.calibrate_neutral_all(channels=CHANNELS, command_signals=COMMANDS, tolerance=0.5)
+        
+        omni.rot_servo.save_calibration(calib_file)
+        logger.info("キャリブレーション結果を保存しました。次回からはスキップされます。")
+
+    # キャリブレーション後（または読み込み後）の最終動作確認
+    print("\n--- キャリブレーション後の全輪同時動作テスト ---")
+    print("補正された速度(0.5)で全輪を 2秒間 回転させます...")
+    for ch in CHANNELS:
+        omni.rot_servo.set_speed(ch, 0.5)
+    time.sleep(2.0)
+    for ch in CHANNELS:
+        omni.rot_servo.set_speed(ch, 0.0)
 
     logger.info("セットアップが完了しました。'start robot!' の受信を待機します（Ctrl+Cで終了）")
     
@@ -55,15 +94,18 @@ def main():
                 
             time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
 
-        omni.Movexy(100,0)
+        omni.Movexy(20,0)
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
         
-        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=0.0)
+        # 首振りを抑えるために kp を下げ、kd を追加。さらにデバッグ出力を有効化
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.3, kp=0.00015, ki=0.0, kd=0.001, debug=True)
 
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
         for i in range(3):
             tracer.run(cross = True)
+            tracer.run(timeout=2)
+
 
         
         omni.Movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)

@@ -6,6 +6,8 @@ class Camera:
         self.picam2 = Picamera2()
         config = self.picam2.create_preview_configuration(main={"size": (width, height)})
         self.picam2.configure(config)
+        # センサーが許す限りの高いフレームレート（最大60fpsなど）を設定
+        self.picam2.set_controls({"FrameRate": 60})
         self.picam2.start()
         time.sleep(2) # カメラの露出やホワイトバランスが安定するまで待機
 

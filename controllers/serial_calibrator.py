@@ -76,30 +76,44 @@ class SerialCalibrator:
 
     def calibrate_speed(self, channel: int, command_signal: str, test_speed: float = 0.5, target_velocity: float = 50.0):
         """
-        サーボの回転速度をキャリブレーションする
-        指令値に対する実際の速度を測定し、個体差を補正するためのスケール係数を算出する
+        サーボの回転速度を正転・逆転両方でキャリブレーションする
+        指令値に対する実際の速度を測定し、個体差を補正するためのスケール係数を正転・逆転それぞれ算出する
         """
         print(f"チャンネル {channel} の速度キャリブレーションを開始します...")
-        self.servo_ctrl.set_speed_scale(channel, 1.0) # 一旦スケールをリセット
+        self.servo_ctrl.set_speed_scale(channel, 1.0, 1.0) # 一旦スケールをリセット
         
+        # 正転のキャリブレーション
         self.servo_ctrl.set_speed(channel, test_speed)
         time.sleep(1.0)
-        
-        velocity = self.get_velocity(command_signal)
-        print(f"指令値 {test_speed} での実際の速度: {velocity}")
-        
+        fw_velocity = self.get_velocity(command_signal)
+        print(f"正転 指令値 {test_speed} での実際の速度: {fw_velocity}")
+        self.servo_ctrl.set_speed(channel, 0.0)
+        time.sleep(0.5)
+
+        # 逆転のキャリブレーション
+        self.servo_ctrl.set_speed(channel, -test_speed)
+        time.sleep(1.0)
+        bw_velocity = self.get_velocity(command_signal)
+        print(f"逆転 指令値 {-test_speed} での実際の速度: {bw_velocity}")
         self.servo_ctrl.set_speed(channel, 0.0)
         
-        if velocity == 0:
-            print("エラー: モーターが回転していないか、速度が0です。")
-            return 1.0
+        scale_fw = 1.0
+        scale_bw = 1.0
 
-        # 理想の速度と実際の速度の比をスケールとする
-        scale = target_velocity / velocity
-        print(f"算出した速度スケール係数: {scale:.3f}")
+        if fw_velocity == 0:
+            print("エラー: 正転時にモーターが回転していないか、速度が0です。")
+        else:
+            scale_fw = abs(target_velocity / fw_velocity)
+
+        if bw_velocity == 0:
+            print("エラー: 逆転時にモーターが回転していないか、速度が0です。")
+        else:
+            scale_bw = abs(target_velocity / bw_velocity)
+
+        print(f"算出した速度スケール係数 -> 正転: {scale_fw:.3f}, 逆転: {scale_bw:.3f}")
         
-        self.servo_ctrl.set_speed_scale(channel, scale)
-        return scale
+        self.servo_ctrl.set_speed_scale(channel, scale_forward=scale_fw, scale_backward=scale_bw)
+        return scale_fw, scale_bw
 
     def calibrate_neutral_all(self, channels: list, command_signals: list, tolerance: float = 0.5):
         """
@@ -148,31 +162,50 @@ class SerialCalibrator:
 
     def calibrate_speed_all(self, channels: list, command_signals: list, test_speed: float = 0.5, target_velocity: float = 50.0):
         """
-        複数のサーボの回転速度を同時にキャリブレーションする
+        複数のサーボの回転速度を正転・逆転両方で同時にキャリブレーションする
         """
-        print("全チャンネルの速度キャリブレーションを開始します...")
-        scales = {}
+        print("全チャンネルの速度キャリブレーション(正転・逆転)を開始します...")
+        scales_fw = {}
+        scales_bw = {}
         
         for ch in channels:
-            self.servo_ctrl.set_speed_scale(ch, 1.0) # 一旦スケールをリセット
-            self.servo_ctrl.set_speed(ch, test_speed)
+            self.servo_ctrl.set_speed_scale(ch, 1.0, 1.0) # 一旦スケールをリセット
             
+        # --- 正転の測定 ---
+        for ch in channels:
+            self.servo_ctrl.set_speed(ch, test_speed)
         time.sleep(1.0)
         
         for ch, cmd in zip(channels, command_signals):
             velocity = self.get_velocity(cmd)
-            print(f"[Ch {ch}] 指令値 {test_speed} での実際の速度: {velocity}")
-            
+            print(f"[Ch {ch}] 正転 指令値 {test_speed} での実際の速度: {velocity}")
             if velocity == 0:
-                print(f"エラー: Ch {ch} モーターが回転していないか、速度が0です。")
-                scales[ch] = 1.0
+                print(f"エラー: Ch {ch} 正転時にモーターが回転していないか、速度が0です。")
+                scales_fw[ch] = 1.0
             else:
-                scale = target_velocity / velocity
-                print(f"-> Ch {ch} 算出した速度スケール係数: {scale:.3f}")
-                scales[ch] = scale
-                self.servo_ctrl.set_speed_scale(ch, scale)
-                
+                scales_fw[ch] = abs(target_velocity / velocity)
+
         for ch in channels:
             self.servo_ctrl.set_speed(ch, 0.0)
+        time.sleep(1.0)
+
+        # --- 逆転の測定 ---
+        for ch in channels:
+            self.servo_ctrl.set_speed(ch, -test_speed)
+        time.sleep(1.0)
+
+        for ch, cmd in zip(channels, command_signals):
+            velocity = self.get_velocity(cmd)
+            print(f"[Ch {ch}] 逆転 指令値 {-test_speed} での実際の速度: {velocity}")
+            if velocity == 0:
+                print(f"エラー: Ch {ch} 逆転時にモーターが回転していないか、速度が0です。")
+                scales_bw[ch] = 1.0
+            else:
+                scales_bw[ch] = abs(target_velocity / velocity)
+
+        for ch in channels:
+            self.servo_ctrl.set_speed(ch, 0.0)
+            print(f"-> Ch {ch} 算出した速度スケール係数 - 正転: {scales_fw[ch]:.3f}, 逆転: {scales_bw[ch]:.3f}")
+            self.servo_ctrl.set_speed_scale(ch, scale_forward=scales_fw[ch], scale_backward=scales_bw[ch])
             
-        return scales
+        return scales_fw, scales_bw
