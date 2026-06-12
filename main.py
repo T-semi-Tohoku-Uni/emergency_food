@@ -107,7 +107,7 @@ def main():
         servo_ctrl.set_angle(9, 180)
 
         logger.info(f"ラインを読める位置まで移動します")
-        omni.Movexy(140,0)
+        omni.Movexy(0,140)
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
         
@@ -125,7 +125,7 @@ def main():
         while True:
             
             logger.info(f"ボールエリアに移動")
-            omni.Movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)
+            omni.Movexy(ball_area[area_step//2][0]*150,ball_area[area_step//2][1]*400)
             
             logger.info(f"ボールの探索と、ボールを中心にとらえる処理を実行")
             # ボール探索用にカメラの解像度を広くし、エラーを防ぐためFPSを自動で落とす
@@ -137,9 +137,11 @@ def main():
                     break
                 omni.Movexy(0,50)
             
+            area_step += 1
+
             servo_ctrl.set_angle(9, 70)
 
-            omni.Movexy(ball_area[area_step][0]*70,0)
+            omni.Movexy(ball_area[area_step//2][0]*70,0)
             omni.turn()
             tracer.run(timeout=3)
 

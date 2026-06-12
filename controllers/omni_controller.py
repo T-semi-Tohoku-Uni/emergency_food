@@ -150,15 +150,15 @@ class OmniSpeed:
     def Movexy(self, x, y, speed=0.5):
         logger.info(f"指定距離移動を開始: x={x}, y={y}, speed={speed}")
         
-        # 前方をx、右向きをyとする
+        # 右向きをx、前方をyとする
         wheel_rotation_x = x / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
         wheel_rotation_y = y / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
 
         pulses = [0,0,0,0]
 
-        pulses[0] = -wheel_rotation_x + wheel_rotation_y
+        pulses[0] =  wheel_rotation_x - wheel_rotation_y
         pulses[1] =  wheel_rotation_x + wheel_rotation_y
-        pulses[2] =  wheel_rotation_x - wheel_rotation_y
+        pulses[2] = -wheel_rotation_x + wheel_rotation_y
         pulses[3] = -wheel_rotation_x - wheel_rotation_y
 
         # 各車輪の基準となる速度（比率を維持した最大速度）
