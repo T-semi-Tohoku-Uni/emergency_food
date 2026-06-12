@@ -140,7 +140,7 @@ def main():
             servo_ctrl.set_angle(9, 70)
 
             omni.Movexy(ball_area[area_step][0]*70,0)
-            turn_180(omni)
+            omni.turn()
             tracer.run(timeout=3)
 
             if ball_color == "blue":
@@ -165,21 +165,21 @@ def main():
                 omni.Movexy(0,600)
                 servo_ctrl.set_angle(9, 180)
                 omni.Movexy(0,-500)
-                turn_180(omni)
+                omni.turn()
                 
             elif coco == 2:
-                turn_90(omni,True)
+                omni.turn(90)
                 omni.Movexy(0,300)
                 servo_ctrl.set_angle(9, 180)
                 omni.Movexy(0,-200)
-                turn_90(omni,True)
+                omni.turn(90)
             
             elif coco == 3:
-                turn_90(omni,True)
+                omni.turn(90)
                 omni.Movexy(0,300)
                 servo_ctrl.set_angle(9, 180)
                 omni.Movexy(0,-200)
-                turn_90(omni,True)
+                omni.turn(90)
                 
             for i in range(coco):
                     tracer.run(cross = True)
@@ -191,18 +191,18 @@ def main():
         serial_ctrl.close()
         cam.stop() # 終了時にカメラリソースを安全に解放する
 
-def turn_180(omni):
-    omni.rotation(1)
-    time.sleep(1.5)
-    omni.stop(calibrate=True)
+# def turn_180(omni):
+#     omni.rotation(1)
+#     time.sleep(1.5)
+#     omni.stop(calibrate=True)
 
-def turn_90(omni,wise =True):
-    if wise:
-        omni.rotation(1)
-    else:
-        omni.rotation(-1)
-    time.sleep(1)
-    omni.stop(calibrate=True)
+# def turn_90(omni,wise =True):
+#     if wise:
+#         omni.rotation(1)
+#     else:
+#         omni.rotation(-1)
+#     time.sleep(1)
+#     omni.stop(calibrate=True)
 
 
 def search_in_ballarea(omni,detector):

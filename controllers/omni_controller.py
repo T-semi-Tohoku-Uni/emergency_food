@@ -240,3 +240,92 @@ class OmniSpeed:
         else:
             re = n*r
         return re
+    
+    def turn(self, theta = 180 ,wise = True, speed=0.5):
+        logger.info(f"指定角度の回転を開始")
+
+        robot_size=170
+        
+        # 車輪の回転量を計算
+        wheel_rotation = (robot_size * math.pi * theta /360 / self.wheel_size * self.pulses_per_revolution)
+
+        if not wise:
+            wheel_rotation = -1* wheel_rotation
+
+        pulses = [0,0,0,0]
+
+        pulses[0] = wheel_rotation
+        pulses[1] = wheel_rotation
+        pulses[2] = wheel_rotation
+        pulses[3] = wheel_rotation
+
+        # 各車輪の基準となる速度（比率を維持した最大速度）
+        base_nom = [self.normalize(pulses[i], speed) for i in range(4)]
+        
+        self.serial.write(("initstep" + '\n').encode('utf-8'))
+
+        line = [0,0,0,0]
+        
+        # 安全対策：永遠に走り続けるのを防ぐためのタイムアウト設定
+        distance = theta
+        timeout_seconds = (distance / 50.0) + 5.0 
+        start_time = time.time()
+        
+        while True:
+            # タイムアウトのチェック
+            if (time.time() - start_time) > timeout_seconds:
+                logger.warning(f"移動がタイムアウトしました。現在のエンコーダ値: {line}")
+                break
+            
+            # 値の「ズレ」を防ぐため、送信する直前に古い受信データを捨てる
+            self.serial.reset_input_buffer()
+            
+            # マイコンに4つのエンコーダ値をまとめて要求するコマンド（Pico側のプログラムに合わせて "stepall" などに変更してください）
+            self.serial.write(("stepall" + '\n').encode('utf-8'))
+
+            # マイコンが返答を準備する時間
+            time.sleep(0.01)
+
+            raw_data = self.serial.readline().decode('utf-8').strip()
+            if raw_data:
+                # カンマ区切りで受信した文字列を分割（スペース区切りの場合は raw_data.split() に変更してください）
+                parts = raw_data.split(',')
+                if len(parts) >= 4:
+                    for i in range(4):
+                        try:
+                            line[i] = float(parts[i].strip())
+                        except ValueError:
+                            continue
+
+            # 各車輪の目標までの残りパルス数を計算
+            # （モーターの回転方向とエンコーダの正負が逆になっても無限ループしないよう、絶対値で比較します）
+            remaining_pulses = []
+            for i in range(4):
+                if pulses[i] != 0:
+                    rem = abs(pulses[i]) - abs(line[i])
+                else:
+                    rem = 0.0
+                remaining_pulses.append(max(0.0, rem))
+                
+            max_remaining = max(remaining_pulses)
+
+            # 全ての車輪が目標付近（残り10未満）に到達、または通り過ぎたら終了
+            if max_remaining < 10:
+                logger.info(f"回転完了: 目標={pulses}, 最終エンコーダ値={line}")
+                break
+
+            # P制御（比例制御）による減速: 残りパルスが指定値未満になったら徐々に減速
+            decel_threshold = 100.0  # 減速を開始する残りパルス数（実機に合わせて調整してください）
+            scale = 1.0
+            if max_remaining < decel_threshold:
+                scale = max(0.15, max_remaining / decel_threshold) # 最低速度(0.15)を確保して途中停止を防ぐ
+
+            # 4輪の比率を保ったままモーターに出力
+            current_nom = [base_nom[i] * scale for i in range(4)]
+            self._set_motors(*current_nom)
+
+            time.sleep(0.1)
+        
+        # 最後に全てのモーターを完全に停止させる
+        self._set_motors(0.0, 0.0, 0.0, 0.0)
+        logger.info("指定距離移動が完了しました。")
