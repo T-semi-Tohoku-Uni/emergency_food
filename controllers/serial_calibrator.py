@@ -7,14 +7,18 @@ import serial
 from controllers.i2c_controller import ServoController
 
 class SerialCalibrator:
-    def __init__(self, servo_ctrl: ServoController, port: str, baudrate: int = 115200):
+    def __init__(self, servo_ctrl: ServoController, port: str = None, baudrate: int = 115200, serial_instance=None):
         """
         シリアル通信を使ってサーボのキャリブレーションを行うクラス
         port: シリアルポート（例: "COM3" または "/dev/ttyUSB0"）
+        serial_instance: すでに開いているserial.Serialインスタンスがある場合はこちらを渡す
         """
         self.servo_ctrl = servo_ctrl
-        self.serial = serial.Serial(port, baudrate, timeout=1.0)
-        time.sleep(2) # シリアル接続の確立待ち
+        if serial_instance is not None:
+            self.serial = serial_instance
+        else:
+            self.serial = serial.Serial(port, baudrate, timeout=1.0)
+            time.sleep(2) # シリアル接続の確立待ち
 
     def get_velocity(self, command_signal: str) -> float:
         """

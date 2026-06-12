@@ -4,6 +4,8 @@ from controllers.omni_controller import OmniSpeed
 from controllers.serial_controller import SerialController
 from controllers.arm_controller import ArmController
 from controllers.line_detector import detect_line
+from controllers.serial_calibrator import SerialCalibrator
+from controllers.line_tracer import LineTracer
 from setup_logger import logger
 
 def main():
@@ -17,18 +19,30 @@ def main():
     serial_port = '/dev/ttyACM0' 
     baud_rate = 115200
 
+    processed_frame, cx, cy = detect_line(crop=(0, 240, 3280, 240))
+
     serial_ctrl = SerialController(port=serial_port, baud_rate=baud_rate)
     if not serial_ctrl.is_open():
         return
+
+    # --- キャリブレーションの実行（完全停止の調整） ---
+    logger.info("サーボモーターのニュートラル（完全停止点）キャリブレーションを開始します...")
+    calibrator = SerialCalibrator(servo_ctrl=omni.rot_servo, serial_instance=serial_ctrl.ser)
+    
+    channels = [omni.front_right, omni.front_left, omni.rear_left, omni.rear_right]
+    commands = ["vela", "velb", "velc", "veld"]
+    
+    # 全輪の停止点を自動調整 (Pico側のエンコーダー速度を読み取って停止点を探します)
+    calibrator.calibrate_neutral_all(channels, commands, tolerance=0.5)
+    logger.info("キャリブレーションが完了し、完全停止のオフセットが設定されました。")
 
     logger.info("セットアップが完了しました。'start robot!' の受信を待機します（Ctrl+Cで終了）")
     
     try:
         # "start robot!" を検知するまで待機するループ
         while True:
-            # ※ 注意: SerialController に受信データを文字列で取得するメソッド (例: read_line) があると想定しています。
-            # 実装に合わせて適切なメソッドに変更してください。
-            received_data = serial_ctrl.read_line() 
+            # 受信バッファを確認してデータを取得
+            received_data = serial_ctrl.check_incoming() 
             
             if received_data and "start robot!" in received_data:
                 logger.info("'start robot!' を検知しました。ロボットのメイン動作を開始します！")
@@ -37,33 +51,9 @@ def main():
             time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
 
         # "start robot!" 検知後のメインループ
-        logger.info("ライントレースを開始します！")
-        
-        # カメラの画像幅が 3280 のため、その中心である 1640 を基準にする
-        center_x = 3280 // 2  
-        base_speed = 0.3      # 前進する基本速度 (0.0 〜 1.0)
-        kp = 0.0005           # 曲がりやすさの調整ゲイン (実機に合わせて調整してください)
-
-        while True:
-            # 画面の下半分を切り取って線を検知
-            processed_frame, cx, cy = detect_line(crop=(0, 240, 3280, 240))
-            
-            if cx is not None:
-                # 画像の中心からどれくらいズレているかを計算
-                diff = cx - center_x
-                
-                # ズレの量に kp (ゲイン) を掛けて、回転速度(omega)を算出
-                # ※ ロボットが逆方向に曲がる場合は kp をマイナス(-0.0005)にしてください
-                omega = diff * kp
-                
-                # x(左右)=0, y(前進)=base_speed で前進しつつ、omega で回転して軌道修正
-                omni.Speedxy_rotation(0, base_speed, omega)
-                
-            else:
-                # 線が見つからない場合は安全のため停止
-                omni.Speedxy(0, 0)
-                
-            time.sleep(0.05)
+        # ライントレース処理を実行
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=0.0)
+        tracer.run()
 
     except KeyboardInterrupt:
         logger.info("プログラムを終了します。")
