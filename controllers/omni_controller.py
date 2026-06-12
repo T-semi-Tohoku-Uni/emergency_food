@@ -128,6 +128,19 @@ class OmniSpeed:
 
         self._set_motors(v_a, v_b, v_c, v_d, smooth=smooth)
 
+    def stop(self, calibrate=False):
+        """
+        全てのモーターを即座に停止させる
+        calibrate=True の場合、その場でニュートラルキャリブレーションを実行し、完全に静止させます。
+        """
+        self._set_motors(0.0, 0.0, 0.0, 0.0, smooth=False)
+        
+        if calibrate:
+            from controllers.serial_calibrator import SerialCalibrator
+            calibrator = SerialCalibrator(servo_ctrl=self.rot_servo, serial_instance=self.serial)
+            channels = [self.front_right, self.front_left, self.rear_left, self.rear_right]
+            calibrator.calibrate_neutral_all(channels, self.commands, tolerance=0.5)
+
     def Movexy(self, x, y, speed=0.5):
         # 前方をx、右向きをyとする
         wheel_rotation_x = x / self.wheel_size * self.inv_root2 * self.pulses_per_revolution

@@ -1,6 +1,8 @@
 import time
 import os
 import argparse
+import math
+import cv2
 from controllers.i2c_controller import ServoController
 from controllers.omni_controller import OmniSpeed
 from controllers.serial_controller import SerialController
@@ -10,6 +12,7 @@ from controllers.serial_calibrator import SerialCalibrator
 from controllers.line_tracer import LineTracer
 # from controllers.moveto import MoveOmni
 from setup_logger import logger
+from controllers.ball_detector import BallDetector
 
 def main():
     parser = argparse.ArgumentParser(description="ロボットのメインプログラム")
@@ -35,8 +38,9 @@ def main():
     omni = OmniSpeed(serial_instance=serial_ctrl.ser)
     arm = ArmController()
     #mov = MoveOmni()
+    detector = BallDetector()
 
-    arm.set_position(140,50)
+    arm.set_position(140,60)
 
     processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop=(0, 240, 1200, 240))
 
@@ -66,6 +70,8 @@ def main():
         logger.info(f"速度スケール -> 正転: {final_scales_fw}, 逆転: {final_scales_bw}")
 
         # 最後に再調整して結果を保存
+        calibrator.calibrate_neutral_all(channels=CHANNELS, command_signals=COMMANDS, tolerance=0.5)
+        time.sleep(2)
         calibrator.calibrate_neutral_all(channels=CHANNELS, command_signals=COMMANDS, tolerance=0.5)
         
         omni.rot_servo.save_calibration(calib_file)
@@ -97,11 +103,23 @@ def main():
             tracer.run(cross = True)
             tracer.run(timeout=0.3)
 
+        while True:
+            
+            omni.Movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)
 
-        
-        omni.Movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)
+            # ボールの探索と、ボールを中心にとらえる処理を実行
+            ball_color = search_in_ballarea(omni, detector)
+            
+            omni.Movexy(ball_area[area_step][0]*70,0)
+            omni.rotation(1)
+            time.sleep(1)
+            # アーム動作前など、完全に静止させたい場面でキャリブレーション付き停止を実行
+            omni.stop(calibrate=True)
 
-        
+
+
+
+
 
 
     except KeyboardInterrupt:
@@ -110,8 +128,55 @@ def main():
         serial_ctrl.close()
 
 
-def search_in_ballarea():
-    pass
+def search_in_ballarea(omni,detector):
+    toto=False
+    for i in range(2):
+        for j in range(2):
+            omni.Movexy(70,0)
+            processed_frame, ball = detector.detect()
+            if ball is not None:
+                toto = True
+                break
+        if toto:
+            break
+        omni.Movexy(0,200)
+    
+    if not toto:
+        logger.info("ボールが見つかりませんでした。")
+        return
+
+    logger.info("ボールへの接近を開始します。")
+    center_x = 3280 // 2
+    center_y = 2400 // 2
+    target_radius = 200 # ボールがこの大きさ(半径)になるまで近づく (実機に合わせて調整してください)
+    kp_x = 0.0002 # ボールを中央に捉えるための回転ゲイン
+    kp_y = 0.0002
+    base_speed = 0.2 # 接近する際の前進速度
+
+    while True:
+        processed_frame, ball = detector.detect()
+        
+        if ball is None:
+            omni.stop()
+            logger.warning("ボールを見失いました！")
+            break
+            
+        diff_x = ball['cx'] - center_x
+        diff_y = ball['cy'] - center_y
+        v_x = diff_x * kp_x
+        
+        # 画像の上方向（Y座標が小さい）にあるときに前進（プラス）させるため、符号を反転します
+        v_y = -diff_y * kp_y
+        
+        if math.fabs(diff_x) <= 20 and math.fabs(diff_y) <= 20 :
+            # ボールを中心にとらえた後、完全に停止させる
+            omni.stop(calibrate=True)
+            logger.info(f"ボールを中心にとらえました")
+            return ball['color']
+            
+        omni.Speedxy(v_x,v_y)
+        time.sleep(0.01)
+    
 
 
 if __name__ == "__main__":
