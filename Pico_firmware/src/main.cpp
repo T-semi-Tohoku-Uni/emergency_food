@@ -80,7 +80,7 @@ void loop() {
     if (reading != buttonState) {
       buttonState = reading;
       if (buttonState == LOW) { // プルアップ設定のため、LOWが「押された」状態
-        Serial.println("Button Pressed!");
+        Serial.println("start robot!");
       }
     }
   }

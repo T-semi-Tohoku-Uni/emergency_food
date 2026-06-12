@@ -1,5 +1,9 @@
 import evdev
-from contollers.omni_controller import OmniSpeed # 作成したクラスをインポート
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
+from controllers.omni_controller import OmniSpeed # 作成したクラスをインポート
+from setup_logger import logger
 
 # デッドゾーン（スティックの触れていない時のブレを無視する遊び）
 DEADZONE = 10
@@ -15,6 +19,7 @@ def normalize_stick(value):
     return offset / 128.0
 
 def main():
+    logger.info("手動操縦モードを起動します。")
     # オムニホイール制御の初期化
     omni = OmniSpeed(max_speed=1.0)
 
@@ -29,11 +34,11 @@ def main():
             break
 
     if not controller:
-        print("DualSenseが見つかりません。Bluetooth接続を確認してください。")
+        logger.error("DualSenseが見つかりません。Bluetooth接続を確認してください。")
         return
 
-    print(f"{controller.name} に接続しました。操縦を開始します。")
-    print("左スティック: 前後左右移動 / 右スティック: 回転 / 終了: Ctrl+C")
+    logger.info(f"{controller.name} に接続しました。操縦を開始します。")
+    logger.info("左スティック: 前後左右移動 / 右スティック: 回転 / 終了: Ctrl+C")
 
     # スティックの現在値を保持する変数
     current_x = 0.0
@@ -67,9 +72,9 @@ def main():
                     omni.Speedxy(current_x, current_y)
 
     except KeyboardInterrupt:
-        print("\nプログラムを終了します。モーターを停止します。")
+        logger.info("プログラムを終了します。モーターを停止します。")
         # 終了時にモーターを安全に停止
-        omni.Speedxy(0, 0)
+        omni.Speedxy(0, 0, smooth=False)
 
 if __name__ == "__main__":
     main()

@@ -26,5 +26,10 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+    # コンソール(標準出力)にも表示する設定
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+
     # ログの書き込み
     logger.info("loggerのセットアップの終了")

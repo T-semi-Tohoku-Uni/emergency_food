@@ -6,7 +6,7 @@
 ## 動作環境
 - **SBC:** Raspberry Pi 3 Model B
 - **OS:** Raspberry Pi OS Lite (64bit, trixie)
-- **Microcontroller:** Arduino Nano (おそらく旧ブートローダー)
+- **Microcontroller:** Raspberry Pi Pico (旧バージョン)
 
 ## 必ずやること
 作業を開始する前に**必ず仮想環境（venv）を有効化**する。
@@ -27,9 +27,9 @@ deactivate
 ### 1. システムパッケージ（apt）(これは仮想環境外で)
 ```bash
 sudo apt update
-sudo apt install libcamera-apps -y
+sudo apt install libcamera-apps libcamera-dev python3-picamera2 python3-libcamera -y
 sudo apt install python3-dev build-essential -y
-sudo apt install -y python3 python3-venv python3-pip cmake
+sudo apt install -y python3 python3-venv python3-pip cmake libcap-dev
 sudo apt-get install i2c-tools
 sudo apt install evtest
 ```
