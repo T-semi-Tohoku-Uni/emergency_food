@@ -8,7 +8,7 @@ from setup_logger import logger
 from controllers.line_detector import detect_line
 
 class LineTracer:
-    def __init__(self, omni, serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=0.0):
+    def __init__(self, omni, serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=1.0, debug=False):
         """
         ライントレースを実行するクラス
         omni: OmniSpeedインスタンス
@@ -24,6 +24,7 @@ class LineTracer:
         self.kp = kp
         self.ki = ki
         self.kd = kd
+        self.debug = debug
         
         # カメラの画像幅が 3280 のため、その中心である 1640 を基準にする
         self.center_x = 3280 // 2  
@@ -31,9 +32,19 @@ class LineTracer:
         # PID制御用の変数
         self.last_diff = 0.0
         self.integral = 0.0
+        self.integral_limit = 1000.0  # 積分値のワインドアップ対策（上限・下限）
 
         # 実行状態を管理するフラグ
         self.is_running = False
+
+    def set_pid(self, kp, ki, kd):
+        """PIDパラメータを実行中に動的に変更する"""
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
+        self.integral = 0.0
+        self.last_diff = 0.0
+        logger.info(f"PIDパラメータを更新しました: Kp={self.kp}, Ki={self.ki}, Kd={self.kd}")
 
     def stop(self):
         """外部からライントレースを強制的に終了させるメソッド"""
@@ -66,7 +77,7 @@ class LineTracer:
                 continue # 次のループ条件の判定に進み、ループを抜ける
 
             # 画面の下半分を切り取って線を検知
-            processed_frame, cx, cy, is_cross = detect_line(crop=(0, 240, 3280, 240))
+            processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop=(0, 240, 3280, 240))
             
             if cx is not None:
                 if is_cross:
@@ -82,10 +93,24 @@ class LineTracer:
                 
                 # PID制御の計算
                 self.integral += diff
+                
+                # アンチワインドアップ（積分項が大きくなりすぎるのを防ぐ）
+                if self.integral > self.integral_limit:
+                    self.integral = self.integral_limit
+                elif self.integral < -self.integral_limit:
+                    self.integral = -self.integral_limit
+
                 derivative = diff - self.last_diff
-                omega = (diff * self.kp) + (self.integral * self.ki) + (derivative * self.kd)
+                
+                p_term = diff * self.kp
+                i_term = self.integral * self.ki
+                d_term = derivative * self.kd
+                omega = p_term + i_term + d_term
                 
                 self.last_diff = diff
+                
+                if self.debug:
+                    logger.info(f"Diff:{diff:5d} | P:{p_term:7.4f} I:{i_term:7.4f} D:{d_term:7.4f} | Omega:{omega:7.4f}")
                 
                 self.omni.Speedxy_rotation(0, self.base_speed, omega)
             else:
