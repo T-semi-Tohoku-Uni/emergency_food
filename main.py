@@ -55,11 +55,12 @@ def main():
                 
             time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
 
+        MoveOmni.movexy(100,0)
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
+        
         tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=0.0, kp_angle=0.01)
 
-        MoveOmni.movexy(100,0)
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
         for i in range(3):
             tracer.run(cross = True)
