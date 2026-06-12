@@ -11,19 +11,19 @@ from setup_logger import logger
 def main():
     logger.info("セットアップを行います")
 
-    # オムニの初期化
-    omni = OmniSpeed()
-    servo_ctrl =  ServoController()
-    arm = ArmController()
     # シリアル通信の初期化 (環境に合わせてポート名を変更してください。例: Windowsなら 'COM3', Linuxなら '/dev/ttyACM0')
     serial_port = '/dev/ttyACM0' 
     baud_rate = 115200
 
-    processed_frame, cx, cy = detect_line(crop=(0, 240, 3280, 240))
-
     serial_ctrl = SerialController(port=serial_port, baud_rate=baud_rate)
     if not serial_ctrl.is_open():
         return
+
+    # オムニとアームの初期化 (開いたシリアル通信を渡す)
+    omni = OmniSpeed(serial_instance=serial_ctrl.ser)
+    arm = ArmController()
+
+    processed_frame, cx, cy, is_cross = detect_line(crop=(0, 240, 3280, 240))
 
     # --- キャリブレーションの実行（完全停止の調整） ---
     logger.info("サーボモーターのニュートラル（完全停止点）キャリブレーションを開始します...")
@@ -53,7 +53,8 @@ def main():
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
         tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=0.0)
-        tracer.run()
+        # 10秒間だけライントレースを実行し、その後自動で停止する
+        tracer.run(timeout=10.0)
 
     except KeyboardInterrupt:
         logger.info("プログラムを終了します。")

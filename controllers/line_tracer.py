@@ -32,21 +32,51 @@ class LineTracer:
         self.last_diff = 0.0
         self.integral = 0.0
 
-    def run(self):
-        logger.info("ライントレースを開始します！")
+        # 実行状態を管理するフラグ
+        self.is_running = False
+
+    def stop(self):
+        """外部からライントレースを強制的に終了させるメソッド"""
+        self.is_running = False
+
+    def run(self, timeout=None,cross = False):
+        """
+        ライントレースを実行する
+        timeout: 指定した秒数(float)が経過すると自動で終了する。Noneの場合は無限に走り続ける。
+        """
+        if timeout is not None:
+            logger.info(f"ライントレースを開始します！（{timeout}秒間）")
+        else:
+            logger.info("ライントレースを開始します！")
+        self.is_running = True
+        start_time = time.time()
         
-        while True:
+        while self.is_running:
+            # タイムアウトのチェック
+            if timeout is not None and (time.time() - start_time) >= timeout:
+                logger.info(f"指定された時間（{timeout}秒）が経過したため、ライントレースを終了します。")
+                self.stop()
+                continue
+
             # シリアル通信からの終了信号（再度 "start robot!"）をチェック
             received_data = self.serial_ctrl.check_incoming()
             if received_data and "start robot!" in received_data:
                 logger.info("再度 'start robot!' を検知しました。ライントレースを終了し、ロボットを停止します。")
-                self.omni.Speedxy(0, 0)
-                break
+                self.stop()
+                continue # 次のループ条件の判定に進み、ループを抜ける
 
             # 画面の下半分を切り取って線を検知
-            processed_frame, cx, cy = detect_line(crop=(0, 240, 3280, 240))
+            processed_frame, cx, cy, is_cross = detect_line(crop=(0, 240, 3280, 240))
             
             if cx is not None:
+                if is_cross:
+                    logger.info("交差点(T字または十字)を検知しました！")
+                    # --- ここに交差点検知時の処理を書くことができます ---
+                    # 例1: 交差点でライントレースを終了させる場合
+                    if cross:
+                        self.stop()
+                        continue
+
                 # 画像の中心からのズレを算出
                 diff = cx - self.center_x
                 
@@ -65,3 +95,6 @@ class LineTracer:
                 self.omni.Speedxy(0, 0)
                 
             time.sleep(0.05)
+
+        # ループを抜けた後（ライントレース終了時）に必ずモーターを停止させる
+        self.omni.Speedxy(0, 0)

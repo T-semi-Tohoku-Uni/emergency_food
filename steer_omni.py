@@ -1,5 +1,5 @@
 import evdev
-from contollers.omni_controller import OmniSpeed # 作成したクラスをインポート
+from controllers.omni_controller import OmniSpeed # 作成したクラスをインポート
 
 # デッドゾーン（スティックの触れていない時のブレを無視する遊び）
 DEADZONE = 10

@@ -44,15 +44,23 @@ def detect_line(crop=None, cross=False, frame=None):
             cx = int(M["m10"] / M["m00"])
             cy = int(M["m01"] / M["m00"])
             
+            # 交差点（T字、十字）の判定
+            # 外接矩形を取得し、その幅(w)が画像全体の幅の 70% 以上なら交差点とみなす
+            x, y, w, h = cv2.boundingRect(c)
+            is_cross = False
+            if w > frame.shape[1] * 0.7:
+                is_cross = True
+                cv2.putText(frame, "CROSS DETECTED", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            
             # 結果をわかりやすく描画 (元のフレームに上書き)
             cv2.drawContours(frame, [c], -1, (0, 255, 0), 2) # 抽出した輪郭を緑色で囲む
             cv2.circle(frame, (cx, cy), 7, (0, 0, 255), -1)  # 重心に赤い点を打つ
             
             # X座標(cx)が画面の中心からどれくらいズレているかが、ライントレースの要になります
-            return frame, cx, cy
+            return frame, cx, cy, is_cross
             
     # 線が見つからなかった場合
-    return frame, None, None
+    return frame, None, None, False
 
 # --- テスト実行用 ---
 if __name__ == "__main__":
@@ -66,12 +74,14 @@ if __name__ == "__main__":
         # cv2.line(test_image, (100, 0), (100, 240), (0, 0, 0), 10)
         
         # 線の検出を実行（frame引数にテスト画像を渡すのでカメラは起動しません）
-        processed_frame, cx, cy = detect_line(crop = (0, 240, 3280, 240))
+        processed_frame, cx, cy, is_cross = detect_line(crop = (0, 240, 3280, 240))
         
         if cx is not None:
             print(f"線を発見しました！ 重心座標: X={cx}, Y={cy}")
             if cx == 100:
                 print("テスト成功: 描画した線の位置(X=100)を正しく認識しました。")
+            if is_cross:
+                print("交差点を検知しました！")
                 
         else:
             print("線が見つかりませんでした。テスト失敗です。")

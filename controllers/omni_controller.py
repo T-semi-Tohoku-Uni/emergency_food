@@ -12,7 +12,7 @@ import serial
 # その場回転とベクトルとxy方向の速度指定のコードを実装する。
 
 class OmniSpeed:
-    def __init__(self,front_right=1,front_left=14,rear_left=15,rear_right=0,max_speed = 1.0, wheel_size = 42, pulses_per_revolution = 24*4):
+    def __init__(self,front_right=1,front_left=14,rear_left=15,rear_right=0,max_speed = 1.0, wheel_size = 42, pulses_per_revolution = 24*4, serial_instance=None):
         #speedxy用の変数
         self.front_right = front_right
         self.front_left= front_left
@@ -35,8 +35,11 @@ class OmniSpeed:
         self.SERIAL_PORT = "/dev/ttyACM0"
         self.BAUDRATE = 115200
 
-        self.serial = serial.Serial(self.SERIAL_PORT, self.BAUDRATE, timeout=1.0)
-        time.sleep(2) # シリアル接続の確立待ち
+        if serial_instance is not None:
+            self.serial = serial_instance
+        else:
+            self.serial = serial.Serial(self.SERIAL_PORT, self.BAUDRATE, timeout=1.0)
+            time.sleep(2) # シリアル接続の確立待ち
     
     # モーターへの出力処理を1つのメソッドに共通化
     def _set_motors(self, v_a, v_b, v_c, v_d):
