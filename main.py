@@ -96,6 +96,7 @@ def main():
             time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
         arm.set_position(140,60)
 
+        logger.info(f"ラインを読める位置まで移動します")
         omni.Movexy(100,0)
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
@@ -125,10 +126,13 @@ def main():
             omni.stop(calibrate=True)
 
             if ball_color == "blue":
+                logger.info(f"青色のボールを保持")
                 coco = 1
             elif ball_color == "yellow":
+                logger.info(f"黄色のボールを保持")
                 coco = 2
             else:
+                logger.info(f"赤色のボールを保持")
                 coco = 3
             
             for i in range(coco):
