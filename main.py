@@ -19,29 +19,25 @@ def main():
     if not serial_ctrl.is_open():
         return
 
-    logger.info("セットアップが完了しました。シリアルデータの受信を待機します（Ctrl+Cで終了）")
-
+    logger.info("セットアップが完了しました。'start robot!' の受信を待機します（Ctrl+Cで終了）")
+    
     try:
+        # "start robot!" を検知するまで待機するループ
         while True:
-            # 受信バッファにデータがあるか確認して処理
-            serial_ctrl.check_incoming()
-                    
-            time.sleep(0.01) # CPU負荷を下げるための短いウェイト
-    
-    
-        
-            # 例として "PING" という特定の信号を送信し、返答を受け取ります
-            # ※実際に相手側が待っている文字列に変更してください
-            reply = serial_ctrl.send_and_receive_command("PING")
+            # ※ 注意: SerialController に受信データを文字列で取得するメソッド (例: read_line) があると想定しています。
+            # 実装に合わせて適切なメソッドに変更してください。
+            received_data = serial_ctrl.read_line() 
             
-            if reply:
-                # 返答に応じた処理（ロボットの制御など）をここに記述します
-                pass
-            else:
-                logger.warning("返答がありませんでした")
+            if received_data and "start robot!" in received_data:
+                logger.info("'start robot!' を検知しました。ロボットのメイン動作を開始します！")
+                break # 待機ループを抜けてメイン処理へ進む
                 
-            # 連続して送信しすぎないよう待機時間を設けます
-            time.sleep(1.0)
+            time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
+
+        # "start robot!" 検知後のメインループ
+        omni.Movexy(200,0)
+
+        
 
     except KeyboardInterrupt:
         logger.info("プログラムを終了します。")
