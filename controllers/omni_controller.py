@@ -174,32 +174,30 @@ class OmniSpeed:
         start_time = time.time()
         
         while True:
-            # 通信のズレを防ぐため、1サイクル（4輪分）の通信を始める直前にバッファをクリア
-            self.serial.reset_input_buffer()
             # タイムアウトのチェック
             if (time.time() - start_time) > timeout_seconds:
                 logger.warning(f"移動がタイムアウトしました。現在のエンコーダ値: {line}")
                 break
             
-            for i in range(4):
-                # 値の「ズレ」を防ぐため、各モーターへ送信する直前に古い受信データを捨てる
-                self.serial.reset_input_buffer()
-                self.serial.write((self.commands[i] + '\n').encode('utf-8'))
+            # 値の「ズレ」を防ぐため、送信する直前に古い受信データを捨てる
+            self.serial.reset_input_buffer()
+            
+            # マイコンに4つのエンコーダ値をまとめて要求するコマンド（Pico側のプログラムに合わせて "stepall" などに変更してください）
+            self.serial.write(("stepall" + '\n').encode('utf-8'))
 
-                time.sleep(0.001)
-                # マイコンが返答を準備する時間を少し長めに確保
-                time.sleep(0.01)
+            # マイコンが返答を準備する時間
+            time.sleep(0.01)
 
-                raw_data = self.serial.readline().decode('utf-8').strip()
-                # logger.debug(f"{self.commands[i]}: {raw_data}") # 頻繁に出力されるためコメントアウト推奨
-                if not raw_data:
-                    # logger.warning(f"{self.commands[i]} の返答が空(タイムアウト)です")
-                    continue
-                
-                try:
-                    line[i] = float(raw_data)
-                except ValueError:
-                    continue
+            raw_data = self.serial.readline().decode('utf-8').strip()
+            if raw_data:
+                # カンマ区切りで受信した文字列を分割（スペース区切りの場合は raw_data.split() に変更してください）
+                parts = raw_data.split(',')
+                if len(parts) >= 4:
+                    for i in range(4):
+                        try:
+                            line[i] = float(parts[i].strip())
+                        except ValueError:
+                            continue
 
             # 各車輪の目標までの残りパルス数を計算
             # （モーターの回転方向とエンコーダの正負が逆になっても無限ループしないよう、絶対値で比較します）
