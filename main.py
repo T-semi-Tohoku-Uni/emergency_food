@@ -36,7 +36,7 @@ def main():
     arm = ArmController()
     #mov = MoveOmni()
 
-    arm.set_position(140,30)
+    arm.set_position(140,50)
 
     processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop=(0, 240, 1200, 240))
 
@@ -71,15 +71,6 @@ def main():
         omni.rot_servo.save_calibration(calib_file)
         logger.info("キャリブレーション結果を保存しました。次回からはスキップされます。")
 
-    # キャリブレーション後（または読み込み後）の最終動作確認
-    print("\n--- キャリブレーション後の全輪同時動作テスト ---")
-    print("補正された速度(0.5)で全輪を 2秒間 回転させます...")
-    for ch in CHANNELS:
-        omni.rot_servo.set_speed(ch, 0.5)
-    time.sleep(2.0)
-    for ch in CHANNELS:
-        omni.rot_servo.set_speed(ch, 0.0)
-
     logger.info("セットアップが完了しました。'start robot!' の受信を待機します（Ctrl+Cで終了）")
     
     try:
@@ -94,17 +85,17 @@ def main():
                 
             time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
 
-        omni.Movexy(20,0)
+        omni.Movexy(100,0)
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
         
-        # 首振りを抑えるために kp を下げ、kd を追加。さらにデバッグ出力を有効化
-        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.3, kp=0.00015, ki=0.0, kd=0.001, debug=True)
+        # 速度を少しだけ落とし、急ハンドル（D項の暴走）を防ぐために kd を下げる
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.7, kp=0.0006, ki=0.0, kd=0.0024, debug=True)
 
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
         for i in range(3):
             tracer.run(cross = True)
-            tracer.run(timeout=2)
+            tracer.run(timeout=0.3)
 
 
         

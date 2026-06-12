@@ -153,7 +153,7 @@ class OmniSpeed:
             for i in range(4):
                 self.serial.write((self.commands[i] + '\n').encode('utf-8'))
 
-                time.sleep(0.5)
+                time.sleep(0.001)
 
                 raw_data = self.serial.readline().decode('utf-8').strip()
                 print(str(self.commands[i])+str(raw_data))
@@ -193,7 +193,7 @@ class OmniSpeed:
             current_nom = [base_nom[i] * scale for i in range(4)]
             self._set_motors(*current_nom)
 
-            time.sleep(0.5)
+            time.sleep(0.1)
         
         # 最後に全てのモーターを完全に停止させる
         self._set_motors(0.0, 0.0, 0.0, 0.0)

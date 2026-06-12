@@ -9,7 +9,7 @@ import math
 # 限界値はエラーを出すようにする。
 
 class ArmController:
-    def __init__(self,right_servo=7,left_servo=8,arm_length_1=80,arm_length_2=80,min_angle=0,max_angle=140):
+    def __init__(self,right_servo=7,left_servo=8,arm_length_1=80,arm_length_2=80,min_angle=0,max_angle=170):
         #channel名の設定
         self.right_servo = right_servo
         self.left_servo = left_servo
