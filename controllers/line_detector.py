@@ -47,10 +47,11 @@ def detect_line(frame):
             angle_diff = calculate_line_angle(c)
             
             # 交差点（T字、十字）の判定
-            # 外接矩形を取得し、その幅(w)が画像全体の幅の 70% 以上なら交差点とみなす
             x, y, w, h = cv2.boundingRect(c)
             is_cross = False
-            if w > frame.shape[1] * 0.7:
+            # 70%は条件として厳しすぎるため 40% に緩和。
+            # 単なるノイズを交差点と誤認しないように、高さ(h)が 20ピクセル 以上あることも条件にする
+            if w > frame.shape[1] * 0.4 and h > 20:
                 is_cross = True
                 cv2.putText(frame, "CROSS DETECTED", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             
