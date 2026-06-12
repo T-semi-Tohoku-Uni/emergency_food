@@ -13,6 +13,7 @@ from controllers.line_tracer import LineTracer
 # from controllers.moveto import MoveOmni
 from setup_logger import logger
 from controllers.ball_detector import BallDetector
+from controllers.camera import Camera
 
 def main():
     parser = argparse.ArgumentParser(description="ロボットのメインプログラム")
@@ -32,21 +33,25 @@ def main():
     if not serial_ctrl.is_open():
         return
     
-    servo_ctrl=ServoController()
+    # ServoControllerのインスタンスをここで1つだけ作成し、全体で共有する
+    servo_ctrl = ServoController()
 
     # オムニとアームの初期化 (開いたシリアル通信を渡す)
-    omni = OmniSpeed(serial_instance=serial_ctrl.ser)
-    arm = ArmController()
-    #mov = MoveOmni()
-    detector = BallDetector()
+    omni = OmniSpeed(servo_ctrl=servo_ctrl, serial_instance=serial_ctrl.ser)
+    arm = ArmController(servo_ctrl=servo_ctrl)
+    
+    # カメラを初期化（最大解像度で1つだけ作成し、全体で共有する）
+    cam = Camera(width=3280, height=120)
+    detector = BallDetector(camera_instance=cam)
 
     arm.set_position(140,60)
 
     servo_ctrl.set_angle(9, 80)
-    arm.set_position(70,90)
+    arm.set_position(70,100)
 
-
-    processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop=(0, 240, 1200, 240))
+    # 最初のライントレース用の切り取りと検知
+    test_frame = cam.capture()
+    processed_frame, cx, cy, is_cross, angle_diff = detect_line(test_frame)
 
     CHANNELS = [1, 14, 15, 0]
     COMMANDS = ["vela", "velb", "velc", "veld"]
@@ -56,14 +61,18 @@ def main():
     # 保存済みのキャリブレーションデータが存在する場合は読み込む
     if os.path.exists(calib_file) and not args.force_calibrate:
         logger.info(f"保存されたキャリブレーションデータ ({calib_file}) を読み込みます。")
-        omni.rot_servo.load_calibration(calib_file)
+        servo_ctrl.load_calibration(calib_file)
+        
+        # 読み込んだオフセットを適用し、確実にモーターを静止状態(0.0)で初期化する
+        for ch in CHANNELS:
+            servo_ctrl.set_speed(ch, 0.0)
     else:
         # --- キャリブレーションの実行 ---
         if args.force_calibrate:
             logger.info("強制キャリブレーションが指定されました。自動キャリブレーションを開始します...")
         else:
             logger.info("キャリブレーションデータが見つからないため、自動キャリブレーションを開始します...")
-        calibrator = SerialCalibrator(servo_ctrl=omni.rot_servo, serial_instance=serial_ctrl.ser)
+        calibrator = SerialCalibrator(servo_ctrl=servo_ctrl, serial_instance=serial_ctrl.ser)
         
         calibrator.calibrate_neutral_all(CHANNELS, COMMANDS, tolerance=0.5)
         logger.info("ニュートラル調整が完了しました。")
@@ -78,7 +87,7 @@ def main():
         time.sleep(2)
         calibrator.calibrate_neutral_all(channels=CHANNELS, command_signals=COMMANDS, tolerance=0.5)
         
-        omni.rot_servo.save_calibration(calib_file)
+        servo_ctrl.save_calibration(calib_file)
         logger.info("キャリブレーション結果を保存しました。次回からはスキップされます。")
 
     logger.info("セットアップが完了しました。'start robot!' の受信を待機します（Ctrl+Cで終了）")
@@ -97,16 +106,17 @@ def main():
         arm.set_position(140,60)
 
         logger.info(f"ラインを読める位置まで移動します")
-        omni.Movexy(100,0)
+        omni.Movexy(140,0)
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
         
         # 速度を少しだけ落とし、急ハンドル（D項の暴走）を防ぐために kd を下げる
-        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.7, kp=0.0006, ki=0.0, kd=0.0028, debug=False)
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.0010, ki=0.0, kd=0.0024, debug=False)
 
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
         for i in range(3):
             tracer.run(cross = True)
+            logger.info(f"ラインを越えます")
             tracer.run(timeout=0.3)
         
         logger.info(f"ライントレースが終了しました。")
@@ -117,6 +127,9 @@ def main():
             omni.Movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)
             
             logger.info(f"ボールの探索と、ボールを中心にとらえる処理を実行")
+            # ボール探索用にカメラの解像度を広くし、エラーを防ぐためFPSを自動で落とす
+            cam.set_resolution(3280, 2400)
+            
             ball_color = search_in_ballarea(omni, detector)
             
             omni.Movexy(ball_area[area_step][0]*70,0)
@@ -134,6 +147,10 @@ def main():
             else:
                 logger.info(f"赤色のボールを保持")
                 coco = 3
+                
+            # 次のライントレースに備えて、カメラの解像度を下げてFPSを60に戻す
+            logger.info("ライントレース用にカメラの解像度を戻します。")
+            cam.set_resolution(3280, 120)
             
             for i in range(coco):
                 tracer.run(cross = True)
@@ -151,6 +168,7 @@ def main():
         logger.info("プログラムを終了します。")
     finally:
         serial_ctrl.close()
+        cam.stop() # 終了時にカメラリソースを安全に解放する
 
 
 def search_in_ballarea(omni,detector):

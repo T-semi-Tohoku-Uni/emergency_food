@@ -16,6 +16,21 @@ class Camera:
         time.sleep(2) # カメラの露出やホワイトバランスが安定するまで待機
         logger.info("カメラを起動しました。")
 
+    def set_resolution(self, width, height):
+        """カメラの解像度を動的に変更する"""
+        logger.info(f"カメラの解像度を {width}x{height} に変更しています...")
+        self.picam2.stop()
+        config = self.picam2.create_preview_configuration(main={"size": (width, height)})
+        self.picam2.configure(config)
+        
+        # 解像度が高いと60fpsでエラーになるため、フレームレートを安全な値に下げる
+        fps = 15 if height > 1000 else 60
+        self.picam2.set_controls({"FrameRate": fps})
+            
+        self.picam2.start()
+        time.sleep(2) # 設定反映待ち
+        logger.info(f"カメラの解像度変更が完了しました (FPS: {fps})。")
+
     def capture(self, crop=None):
         """画像をNumPy配列（OpenCV形式）で取得して返す
         crop: (x, y, width, height) の形式で指定すると、その範囲を切り取って返す
@@ -36,10 +51,6 @@ def main():
         print("画像をキャプチャします...")
         image_array = cam.capture()
         print(f"画像を取得しました！ サイズ: {image_array.shape}")
-
-        # 切り取りのテスト (例: 画像の下半分を切り取る。640x480の場合、y=240から高さ240分)
-        cropped_image = cam.capture(crop=(0, 240, 3280, 240))
-        print(f"切り取った画像サイズ: {cropped_image.shape}")
 
     finally:
         cam.stop()

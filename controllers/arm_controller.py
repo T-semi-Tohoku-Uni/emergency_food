@@ -14,7 +14,7 @@ from setup_logger import logger
 # 限界値はエラーを出すようにする。
 
 class ArmController:
-    def __init__(self,right_servo=7,left_servo=8,arm_length_1=80,arm_length_2=80,min_angle=0,max_angle=170):
+    def __init__(self, servo_ctrl=None, right_servo=7,left_servo=8,arm_length_1=80,arm_length_2=80,min_angle=0,max_angle=170):
         #channel名の設定
         self.right_servo = right_servo
         self.left_servo = left_servo
@@ -24,10 +24,13 @@ class ArmController:
         self.arm_length_2 = arm_length_2
 
         # サーボコントローラーの初期化
-        self.servo_ctrl = ServoController(max_angle=180)
+        if servo_ctrl:
+            self.servo_ctrl = servo_ctrl
+        else:
+            self.servo_ctrl = ServoController(max_angle=180)
 
         # アームの限界値の定義（ここにまとめるのがベストです）
-        self._max_height = 90
+        self._max_height = 110
         self._min_height = 0
         self._max_length = 180
         self._min_length = 30

@@ -38,9 +38,7 @@ class BallDetector:
             if self.cam is None:
                 # line_detectorと同じ解像度で初期化します
                 self.cam = Camera(width=3280, height=2400)
-            # ボールは床にあると想定し、必要に応じて切り取ります（デフォルトは全体）
-            crop_area = crop if crop is not None else (0, 0, 3280, 2400)
-            frame = self.cam.capture(crop=crop_area)
+            frame = self.cam.capture()
 
         # 色の判定をしやすくするため、BGRからHSV色空間に変換
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)

@@ -13,14 +13,17 @@ from setup_logger import logger
 # その場回転とベクトルとxy方向の速度指定のコードを実装する。
 
 class OmniSpeed:
-    def __init__(self,front_right=1,front_left=14,rear_left=15,rear_right=0,max_speed = 1.0, wheel_size = 42, pulses_per_revolution = 24*4, serial_instance=None):
+    def __init__(self, servo_ctrl=None, front_right=1,front_left=14,rear_left=15,rear_right=0,max_speed = 1.0, wheel_size = 42, pulses_per_revolution = 24*4, serial_instance=None):
         #speedxy用の変数
         self.front_right = front_right
         self.front_left= front_left
         self.rear_left = rear_left
         self.rear_right = rear_right
         # サーボコントローラーの初期化
-        self.rot_servo = ServoController()
+        if servo_ctrl:
+            self.rot_servo = servo_ctrl
+        else:
+            self.rot_servo = ServoController()
         
         # モーターの滑らかな加減速（スルーレート制限）用の変数
         self.current_speeds = [0.0, 0.0, 0.0, 0.0]
@@ -146,6 +149,7 @@ class OmniSpeed:
 
     def Movexy(self, x, y, speed=0.5):
         logger.info(f"指定距離移動を開始: x={x}, y={y}, speed={speed}")
+        
         # 前方をx、右向きをyとする
         wheel_rotation_x = x / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
         wheel_rotation_y = y / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
@@ -163,14 +167,28 @@ class OmniSpeed:
         self.serial.write(("initstep" + '\n').encode('utf-8'))
 
         line = [0,0,0,0]
+        
+        # 安全対策：永遠に走り続けるのを防ぐためのタイムアウト設定
+        distance = math.sqrt(x**2 + y**2)
+        timeout_seconds = (distance / 50.0) + 5.0 
+        start_time = time.time()
+        
         while True:
             # 通信のズレを防ぐため、1サイクル（4輪分）の通信を始める直前にバッファをクリア
             self.serial.reset_input_buffer()
+            # タイムアウトのチェック
+            if (time.time() - start_time) > timeout_seconds:
+                logger.warning(f"移動がタイムアウトしました。現在のエンコーダ値: {line}")
+                break
             
             for i in range(4):
+                # 値の「ズレ」を防ぐため、各モーターへ送信する直前に古い受信データを捨てる
+                self.serial.reset_input_buffer()
                 self.serial.write((self.commands[i] + '\n').encode('utf-8'))
 
                 time.sleep(0.001)
+                # マイコンが返答を準備する時間を少し長めに確保
+                time.sleep(0.01)
 
                 raw_data = self.serial.readline().decode('utf-8').strip()
                 # logger.debug(f"{self.commands[i]}: {raw_data}") # 頻繁に出力されるためコメントアウト推奨
@@ -183,13 +201,12 @@ class OmniSpeed:
                 except ValueError:
                     continue
 
-            # 各車輪の目標までの残りパルス数を計算（オーバーシュート時は0とする）
+            # 各車輪の目標までの残りパルス数を計算
+            # （モーターの回転方向とエンコーダの正負が逆になっても無限ループしないよう、絶対値で比較します）
             remaining_pulses = []
             for i in range(4):
-                if pulses[i] > 0:
-                    rem = pulses[i] - line[i]
-                elif pulses[i] < 0:
-                    rem = line[i] - pulses[i]
+                if pulses[i] != 0:
+                    rem = abs(pulses[i]) - abs(line[i])
                 else:
                     rem = 0.0
                 remaining_pulses.append(max(0.0, rem))
@@ -198,6 +215,7 @@ class OmniSpeed:
 
             # 全ての車輪が目標付近（残り10未満）に到達、または通り過ぎたら終了
             if max_remaining < 10:
+                logger.info(f"移動完了: 目標={pulses}, 最終エンコーダ値={line}")
                 break
 
             # P制御（比例制御）による減速: 残りパルスが指定値未満になったら徐々に減速

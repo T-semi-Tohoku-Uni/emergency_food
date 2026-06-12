@@ -8,11 +8,12 @@ from setup_logger import logger
 from controllers.line_detector import detect_line
 
 class LineTracer:
-    def __init__(self, omni, serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=5.0, debug=False):
+    def __init__(self, omni, serial_ctrl, camera, base_speed=0.3, kp=0.0005, ki=0.0, kd=5.0, debug=False):
         """
         ライントレースを実行するクラス
         omni: OmniSpeedインスタンス
         serial_ctrl: SerialControllerインスタンス
+        camera: Cameraインスタンス（複数起動によるリソース競合を防ぐため外部から渡す）
         base_speed: 前進する基本速度
         kp: 比例ゲイン（現在のズレに対する修正力）
         ki: 積分ゲイン（過去のズレの蓄積に対する修正力）
@@ -20,6 +21,7 @@ class LineTracer:
         """
         self.omni = omni
         self.serial_ctrl = serial_ctrl
+        self.camera = camera
         self.base_speed = base_speed
         self.kp = kp
         self.ki = ki
@@ -76,8 +78,9 @@ class LineTracer:
                 self.stop()
                 continue # 次のループ条件の判定に進み、ループを抜ける
 
-            # 画面の下半分を切り取って線を検知
-            processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop=(0, 240, 3280, 240))
+            # 画像全体を使って線を検知
+            frame = self.camera.capture()
+            processed_frame, cx, cy, is_cross, angle_diff = detect_line(frame)
             
             if cx is not None:
                 if is_cross:
@@ -111,6 +114,9 @@ class LineTracer:
                 i_term = self.integral * self.ki
                 d_term = derivative * self.kd
                 omega = p_term + i_term + d_term
+                
+                # 回転の力が強すぎてその場でスピンするのを防ぐため、omegaの最大値/最小値を制限
+                omega = max(-0.5, min(0.5, omega))
                 
                 self.last_diff = diff
                 
