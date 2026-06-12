@@ -26,7 +26,7 @@ def main():
     # オムニとアームの初期化 (開いたシリアル通信を渡す)
     omni = OmniSpeed(serial_instance=serial_ctrl.ser)
     arm = ArmController()
-    mov
+    mov = MoveOmni()
 
     processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop=(0, 240, 3280, 240))
 
@@ -55,7 +55,7 @@ def main():
                 
             time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
 
-        MoveOmni.movexy(100,0)
+        mov.movexy(100,0)
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
         
@@ -66,7 +66,7 @@ def main():
             tracer.run(cross = True)
 
         
-        MoveOmni.movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)
+        mov.movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)
 
         
 
@@ -78,6 +78,7 @@ def main():
 
 
 def search_in_ballarea():
+    pass
 
 
 if __name__ == "__main__":
