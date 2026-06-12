@@ -37,6 +37,9 @@ def main():
         # "start robot!" 検知後のメインループ
         omni.Movexy(200,0)
 
+
+        
+
         
 
     except KeyboardInterrupt:
