@@ -1,12 +1,18 @@
 import time
+import sys
+import os
+# パスを追加
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
+
 from controllers.i2c_controller import ServoController
 import math
+import serial
 
 # 方針
 # その場回転とベクトルとxy方向の速度指定のコードを実装する。
 
 class OmniSpeed:
-    def __init__(self,front_right=1,front_left=14,rear_left=15,rear_right=0,max_speed = 1.0):
+    def __init__(self,front_right=1,front_left=14,rear_left=15,rear_right=0,max_speed = 1.0, wheel_size = 42, pulses_per_revolution = 24*4):
         #speedxy用の変数
         self.front_right = front_right
         self.front_left= front_left
@@ -20,6 +26,17 @@ class OmniSpeed:
 
         # モーターの最大許容速度を定義
         self.max_speed = max_speed
+
+        self.wheel_size = 42
+        self.pulses_per_revolution = pulses_per_revolution
+
+        self.commands = ["stepa","stepb","stepc","stepd"]
+
+        self.SERIAL_PORT = "/dev/ttyACM0"
+        self.BAUDRATE = 115200
+
+        self.serial = serial.Serial(self.SERIAL_PORT, self.BAUDRATE, timeout=1.0)
+        time.sleep(2) # シリアル接続の確立待ち
     
     # モーターへの出力処理を1つのメソッドに共通化
     def _set_motors(self, v_a, v_b, v_c, v_d):
@@ -89,3 +106,80 @@ class OmniSpeed:
         v_d = -nx - ny + omega
 
         self._set_motors(v_a, v_b, v_c, v_d)
+
+    def Movexy(self, x, y, speed=0.5):
+        # 前方をx、右向きをyとする
+        wheel_rotation_x = x / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
+        wheel_rotation_y = y / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
+
+        pulses = [0,0,0,0]
+
+        pulses[0] =  wheel_rotation_x - wheel_rotation_y
+        pulses[1] =  wheel_rotation_x + wheel_rotation_y
+        pulses[2] = -wheel_rotation_x + wheel_rotation_y
+        pulses[3] = -wheel_rotation_x - wheel_rotation_y
+
+        # 各車輪の基準となる速度（比率を維持した最大速度）
+        base_nom = [self.normalize(pulses[i], speed) for i in range(4)]
+        
+        self.serial.write(("initstep" + '\n').encode('utf-8'))
+
+        line = [0,0,0,0]
+        while True:
+            # 通信のズレを防ぐため、1サイクル（4輪分）の通信を始める直前にバッファをクリア
+            self.serial.reset_input_buffer()
+            
+            for i in range(4):
+                self.serial.write((self.commands[i] + '\n').encode('utf-8'))
+
+                raw_data = self.serial.readline().decode('utf-8').strip()
+                print(str(self.commands[i])+str(raw_data))
+                if not raw_data:
+                    # print(f"[警告] {self.commands[i]} の返答が空(タイムアウト)です")
+                    continue
+
+                try:
+                    line[i] = float(raw_data)
+                except ValueError:
+                    continue
+
+            # 各車輪の目標までの残りパルス数を計算（オーバーシュート時は0とする）
+            remaining_pulses = []
+            for i in range(4):
+                if pulses[i] > 0:
+                    rem = pulses[i] - line[i]
+                elif pulses[i] < 0:
+                    rem = line[i] - pulses[i]
+                else:
+                    rem = 0.0
+                remaining_pulses.append(max(0.0, rem))
+                
+            max_remaining = max(remaining_pulses)
+
+            # 全ての車輪が目標付近（残り10未満）に到達、または通り過ぎたら終了
+            if max_remaining < 10:
+                break
+
+            # P制御（比例制御）による減速: 残りパルスが指定値未満になったら徐々に減速
+            decel_threshold = 100.0  # 減速を開始する残りパルス数（実機に合わせて調整してください）
+            scale = 1.0
+            if max_remaining < decel_threshold:
+                scale = max(0.15, max_remaining / decel_threshold) # 最低速度(0.15)を確保して途中停止を防ぐ
+
+            # 4輪の比率を保ったままモーターに出力
+            current_nom = [base_nom[i] * scale for i in range(4)]
+            self._set_motors(*current_nom)
+
+            time.sleep(0.5)
+        
+        # 最後に全てのモーターを完全に停止させる
+        self._set_motors(0.0, 0.0, 0.0, 0.0)
+
+    def normalize(self, n, r):
+        if n == 0:
+            return 0.0
+        if math.fabs(n) > 1:
+            re = n/math.fabs(n)*r
+        else:
+            re = n*r
+        return re
