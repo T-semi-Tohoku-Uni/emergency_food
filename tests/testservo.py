@@ -1,5 +1,11 @@
 import time
-from i2c_controller import ServoController
+import sys
+import os
+
+# このファイルの場所(tests)から見て、1つ上の階層(emergency_food_robot)をモジュール検索パスに追加
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from controllers.i2c_controller import ServoController
 
 def main():
     print("ロボットのシステムを起動します...")
@@ -9,7 +15,7 @@ def main():
 
     try:
         # 例：PCA9685の「0番」ピンに繋いだサーボを動かすテスト
-        target_channel = 0
+        target_channel = 9
 
         print("0度へ移動")
         servo_ctrl.set_angle(target_channel, 0)

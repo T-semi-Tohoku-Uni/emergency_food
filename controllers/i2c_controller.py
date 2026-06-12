@@ -1,0 +1,143 @@
+# i2c_controller.py
+from board import SCL, SDA
+import busio
+from adafruit_pca9685 import PCA9685
+from adafruit_motor import servo
+import json
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
+from setup_logger import logger
+
+class ServoController:
+    def __init__(self, channels=16,max_angle=180):
+        # I2Cバスの初期化
+        self.i2c = busio.I2C(SCL, SDA)
+        
+        # PCA9685の初期化（デフォルトのI2Cアドレスは0x40）
+        self.pca = PCA9685(self.i2c)
+        
+        # サーボモーターの標準的な周波数は50Hz
+        self.pca.frequency = 50
+
+        self.max_angle = max_angle
+        
+        # 連続回転サーボの停止点（ニュートラル）オフセットを保持する辞書 (単位: マイクロ秒)
+        self.calibration_offsets = {i: 0 for i in range(channels)}
+
+        # 連続回転サーボの回転速度の個体差を正転・逆転それぞれで補正するスケール係数を保持する辞書
+        self.speed_scales_forward = {i: 1.0 for i in range(channels)}
+        self.speed_scales_backward = {i: 1.0 for i in range(channels)}
+
+        # サーボオブジェクトを格納するリスト
+        self.servos = []
+        for i in range(channels):
+            # 一般的なSG90などのサーボはパルス幅 0.5ms(500us) ~ 2.4ms(2400us) で0〜180度動く
+            # デフォルトでは標準サーボとして初期化しておく
+            s = servo.Servo(self.pca.channels[i], min_pulse=500, max_pulse=2400)
+            self.servos.append(s)
+            
+        logger.info("ServoControllerの初期化が完了しました。")
+
+    def set_calibration_offset(self, channel, offset_us):
+        """
+        ローテーションサーボの停止点（ニュートラル位置）のずれをマイクロ秒単位で補正する
+        channel: 0 ~ 15
+        offset_us: ずらす量（例: 停止点が1520usなら +20 を指定）
+        """
+        self.calibration_offsets[channel] = offset_us
+        # 既にContinuousServoとして初期化されている場合は、新しいオフセットで再設定
+        if isinstance(self.servos[channel], servo.ContinuousServo):
+            self.servos[channel] = servo.ContinuousServo(
+                self.pca.channels[channel], min_pulse=700 + offset_us, max_pulse=2300 + offset_us
+            )
+
+    def set_speed_scale(self, channel, scale_forward=1.0, scale_backward=1.0):
+        """
+        ローテーションサーボの回転速度の個体差を補正する係数を正転・逆転それぞれ設定する
+        channel: 0 ~ 15
+        scale_forward: 正転時の補正係数
+        scale_backward: 逆転時の補正係数
+        """
+        self.speed_scales_forward[channel] = scale_forward
+        self.speed_scales_backward[channel] = scale_backward
+
+    def set_angle(self, channel, angle):
+        """
+        指定したチャンネルのサーボを特定の角度に動かす
+        channel: 0 ~ 15 (PCA9685のピン番号)
+        angle: 0 ~ 180 (度)
+        """
+        # すでにローテーションサーボとして使われているチャンネルの誤操作を防ぐ
+        if isinstance(self.servos[channel], servo.ContinuousServo):
+            logger.error(f"チャンネル{channel}はローテーションサーボとして設定されています。")
+            return
+
+        if 0 <= angle <= self.max_angle:
+            self.servos[channel].angle = angle
+        else:
+            logger.error(f"角度は0から180の間で指定してください (入力値: {angle})")
+
+    def set_speed(self, channel, speed):
+        """
+        指定したチャンネルのローテーション(連続回転)サーボの速度を設定する
+        channel: 0 ~ 15
+        speed: -1.0 (逆転最大) ~ 1.0 (正転最大), 0.0 で停止
+        """
+        # 初回呼び出し時に標準サーボオブジェクトをContinuousServoに置き換える
+        if not isinstance(self.servos[channel], servo.ContinuousServo):
+            offset = self.calibration_offsets[channel]
+            self.servos[channel] = servo.ContinuousServo(
+                self.pca.channels[channel], min_pulse=700 + offset, max_pulse=2300 + offset
+            )
+
+        # 速度を設定 (throttleプロパティを使用)
+        # スケール補正を適用し、最大/最小値の範囲(-1.0 ~ 1.0)に制限する
+        if -1.0 <= speed <= 1.0:
+            if speed > 0:
+                adjusted_speed = speed * self.speed_scales_forward[channel]
+            elif speed < 0:
+                adjusted_speed = speed * self.speed_scales_backward[channel]
+            else:
+                adjusted_speed = 0.0
+            adjusted_speed = max(-1.0, min(1.0, adjusted_speed))
+            self.servos[channel].throttle = adjusted_speed
+        else:
+            logger.error(f"速度は-1.0から1.0の間で指定してください (入力値: {speed})")
+
+    def cleanup(self):
+        """終了時にPCA9685の出力をリセットする"""
+        self.pca.deinit()
+        logger.info("PCA9685の出力をリセットしました。")
+
+    def save_calibration(self, filepath="calibration_data.json"):
+        """キャリブレーションデータをJSONファイルに保存する"""
+        data = {
+            "offsets": self.calibration_offsets,
+            "scales_forward": self.speed_scales_forward,
+            "scales_backward": self.speed_scales_backward
+        }
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=4)
+        logger.info(f"キャリブレーションデータを {filepath} に保存しました。")
+
+    def load_calibration(self, filepath="calibration_data.json"):
+        """JSONファイルからキャリブレーションデータを読み込む"""
+        if not os.path.exists(filepath):
+            logger.warning(f"キャリブレーションファイル {filepath} が見つかりません。")
+            return False
+            
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+            
+        # JSONのキーは文字列になるため、int型に変換して復元する
+        if "offsets" in data:
+            self.calibration_offsets = {int(k): v for k, v in data["offsets"].items()}
+        if "scales_forward" in data:
+            self.speed_scales_forward = {int(k): v for k, v in data["scales_forward"].items()}
+        if "scales_backward" in data:
+            self.speed_scales_backward = {int(k): v for k, v in data["scales_backward"].items()}
+            
+        logger.info(f"キャリブレーションデータを {filepath} から読み込みました。")
+        return True

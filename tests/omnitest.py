@@ -1,6 +1,11 @@
 import time
-from i2c_controller import ServoController
-from omni_controller import OmniSpeed
+import sys
+import os
+# パスを追加
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
+
+from controllers.i2c_controller import ServoController
+from controllers.omni_controller import OmniSpeed
 
 def main():
     print("オムニの動作確認を行います...")
@@ -15,20 +20,20 @@ def main():
 
         print("Speedxy")
         omni.Speedxy(10,10)
-        time.sleep(10)
+        time.sleep(5)
 
         print("SpeedPolar")
         omni.SpeedPolar(10,0)
-        time.sleep(10)
+        time.sleep(5)
 
         print("rotation")
         omni.rotation(10)
-        time.sleep(10)
+        time.sleep(5)
 
         print("stop")
         #omni.rotation(0)
         omni.SpeedPolar(0,0)
-        time.sleep(10)
+        time.sleep(5)
 
     except KeyboardInterrupt:
         # Ctrl+Cで停止したときの処理
