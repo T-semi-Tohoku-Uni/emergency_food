@@ -6,7 +6,7 @@ from controllers.arm_controller import ArmController
 from controllers.line_detector import detect_line
 from controllers.serial_calibrator import SerialCalibrator
 from controllers.line_tracer import LineTracer
-from controllers.moveto import MoveOmni
+# from controllers.moveto import MoveOmni
 from setup_logger import logger
 
 def main():
@@ -26,7 +26,7 @@ def main():
     # オムニとアームの初期化 (開いたシリアル通信を渡す)
     omni = OmniSpeed(serial_instance=serial_ctrl.ser)
     arm = ArmController()
-    mov = MoveOmni()
+    #mov = MoveOmni()
 
     processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop=(0, 240, 3280, 240))
 
@@ -55,18 +55,18 @@ def main():
                 
             time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
 
-        mov.movexy(100,0)
+        omni.Movexy(100,0)
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
         
-        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=0.0, kp_angle=0.01)
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=0.0)
 
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
         for i in range(3):
             tracer.run(cross = True)
 
         
-        mov.movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)
+        omni.Movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)
 
         
 
