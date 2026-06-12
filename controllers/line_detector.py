@@ -12,6 +12,14 @@ from controllers.camera import Camera
 # カメラのインスタンスを保持するグローバル変数
 _cam_instance = None
 
+def calculate_line_angle(contour):
+    """OpenCVのfitLineを使って輪郭から直線の傾き（角度）を計算します"""
+    [vx, vy, x0, y0] = cv2.fitLine(contour, cv2.DIST_L2, 0, 0.01, 0.01)
+    if vy[0] != 0:
+        return math.degrees(math.atan(vx[0] / vy[0]))
+    else:
+        return 0.0
+
 def detect_line(crop=None, cross=False, frame=None):
     global _cam_instance
     # frameが渡されなかった場合、カメラから自動取得する
@@ -44,6 +52,9 @@ def detect_line(crop=None, cross=False, frame=None):
             cx = int(M["m10"] / M["m00"])
             cy = int(M["m01"] / M["m00"])
             
+            # 線の傾き（角度）を計算
+            angle_diff = calculate_line_angle(c)
+            
             # 交差点（T字、十字）の判定
             # 外接矩形を取得し、その幅(w)が画像全体の幅の 70% 以上なら交差点とみなす
             x, y, w, h = cv2.boundingRect(c)
@@ -55,12 +66,13 @@ def detect_line(crop=None, cross=False, frame=None):
             # 結果をわかりやすく描画 (元のフレームに上書き)
             cv2.drawContours(frame, [c], -1, (0, 255, 0), 2) # 抽出した輪郭を緑色で囲む
             cv2.circle(frame, (cx, cy), 7, (0, 0, 255), -1)  # 重心に赤い点を打つ
+            cv2.putText(frame, f"Angle: {angle_diff:.1f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
             
             # X座標(cx)が画面の中心からどれくらいズレているかが、ライントレースの要になります
-            return frame, cx, cy, is_cross
+            return frame, cx, cy, is_cross, angle_diff
             
     # 線が見つからなかった場合
-    return frame, None, None, False
+    return frame, None, None, False, 0.0
 
 # --- テスト実行用 ---
 if __name__ == "__main__":
@@ -74,7 +86,7 @@ if __name__ == "__main__":
         # cv2.line(test_image, (100, 0), (100, 240), (0, 0, 0), 10)
         
         # 線の検出を実行（frame引数にテスト画像を渡すのでカメラは起動しません）
-        processed_frame, cx, cy, is_cross = detect_line(crop = (0, 240, 3280, 240))
+        processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop = (0, 240, 3280, 240))
         
         if cx is not None:
             print(f"線を発見しました！ 重心座標: X={cx}, Y={cy}")

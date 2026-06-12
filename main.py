@@ -6,6 +6,7 @@ from controllers.arm_controller import ArmController
 from controllers.line_detector import detect_line
 from controllers.serial_calibrator import SerialCalibrator
 from controllers.line_tracer import LineTracer
+from controllers.moveto import MoveOmni
 from setup_logger import logger
 
 def main():
@@ -15,6 +16,9 @@ def main():
     serial_port = '/dev/ttyACM0' 
     baud_rate = 115200
 
+    ball_area = [(0,0),(0,1),(1,0),(1,1),(2,0),(2,1),(3,0),(3,1)]
+    area_step=0
+
     serial_ctrl = SerialController(port=serial_port, baud_rate=baud_rate)
     if not serial_ctrl.is_open():
         return
@@ -22,8 +26,9 @@ def main():
     # オムニとアームの初期化 (開いたシリアル通信を渡す)
     omni = OmniSpeed(serial_instance=serial_ctrl.ser)
     arm = ArmController()
+    mov
 
-    processed_frame, cx, cy, is_cross = detect_line(crop=(0, 240, 3280, 240))
+    processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop=(0, 240, 3280, 240))
 
     # --- キャリブレーションの実行（完全停止の調整） ---
     logger.info("サーボモーターのニュートラル（完全停止点）キャリブレーションを開始します...")
@@ -52,14 +57,27 @@ def main():
 
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
-        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=0.0)
-        # 10秒間だけライントレースを実行し、その後自動で停止する
-        tracer.run(timeout=10.0)
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.3, kp=0.0005, ki=0.0, kd=0.0, kp_angle=0.01)
+
+        MoveOmni.movexy(100,0)
+        # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
+        for i in range(3):
+            tracer.run(cross = True)
+
+        
+        MoveOmni.movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)
+
+        
+
 
     except KeyboardInterrupt:
         logger.info("プログラムを終了します。")
     finally:
         serial_ctrl.close()
+
+
+def search_in_ballarea():
+
 
 if __name__ == "__main__":
     main()
