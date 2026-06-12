@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
 import serial
 from controllers.i2c_controller import ServoController
+from setup_logger import logger
 
 class SerialCalibrator:
     def __init__(self, servo_ctrl: ServoController, port: str = None, baudrate: int = 115200, serial_instance=None):
@@ -37,7 +38,7 @@ class SerialCalibrator:
         try:
             return float(line)
         except ValueError:
-            print(f"警告: 速度の読み取りに失敗しました (受信内容: '{line}')")
+            logger.warning(f"速度の読み取りに失敗しました (受信内容: '{line}')")
             return 0.0
 
     def calibrate_neutral(self, channel: int, command_signal: str, tolerance: float = 0.5):
@@ -45,7 +46,7 @@ class SerialCalibrator:
         サーボの静止点（ニュートラルパルス）をキャリブレーションする
         速度が許容範囲内(tolerance)に収まるまでオフセットを調整する
         """
-        print(f"チャンネル {channel} のニュートラルキャリブレーションを開始します...")
+        logger.info(f"チャンネル {channel} のニュートラルキャリブレーションを開始します...")
         offset = 0
         self.servo_ctrl.set_calibration_offset(channel, offset)
         self.servo_ctrl.set_speed(channel, 0.0) # 停止指令を送る
@@ -54,10 +55,10 @@ class SerialCalibrator:
         # フィードバックループで0に近づける（最大20回繰り返す）
         for i in range(20):
             velocity = self.get_velocity(command_signal)
-            print(f"現在の速度: {velocity}, 現在のオフセット: {offset}")
+            logger.debug(f"現在の速度: {velocity}, 現在のオフセット: {offset}")
 
             if abs(velocity) <= tolerance:
-                print(f"ニュートラル調整完了: 最終オフセット {offset}us")
+                logger.info(f"チャンネル {channel} のニュートラル調整完了: 最終オフセット {offset}us")
                 return offset
 
             # 速度がプラスかマイナスかに応じてパルスを微調整
@@ -71,7 +72,7 @@ class SerialCalibrator:
             self.servo_ctrl.set_speed(channel, 0.0)
             time.sleep(1)
 
-        print("完全な静止には至りませんでしたが、最も近い値で終了します。")
+        logger.warning(f"チャンネル {channel}: 完全な静止には至りませんでしたが、最も近い値で終了します。")
         return offset
 
     def calibrate_speed(self, channel: int, command_signal: str, test_speed: float = 0.5, target_velocity: float = 50.0):
@@ -79,14 +80,14 @@ class SerialCalibrator:
         サーボの回転速度を正転・逆転両方でキャリブレーションする
         指令値に対する実際の速度を測定し、個体差を補正するためのスケール係数を正転・逆転それぞれ算出する
         """
-        print(f"チャンネル {channel} の速度キャリブレーションを開始します...")
+        logger.info(f"チャンネル {channel} の速度キャリブレーションを開始します...")
         self.servo_ctrl.set_speed_scale(channel, 1.0, 1.0) # 一旦スケールをリセット
         
         # 正転のキャリブレーション
         self.servo_ctrl.set_speed(channel, test_speed)
         time.sleep(1.0)
         fw_velocity = self.get_velocity(command_signal)
-        print(f"正転 指令値 {test_speed} での実際の速度: {fw_velocity}")
+        logger.debug(f"正転 指令値 {test_speed} での実際の速度: {fw_velocity}")
         self.servo_ctrl.set_speed(channel, 0.0)
         time.sleep(0.5)
 
@@ -94,23 +95,23 @@ class SerialCalibrator:
         self.servo_ctrl.set_speed(channel, -test_speed)
         time.sleep(1.0)
         bw_velocity = self.get_velocity(command_signal)
-        print(f"逆転 指令値 {-test_speed} での実際の速度: {bw_velocity}")
+        logger.debug(f"逆転 指令値 {-test_speed} での実際の速度: {bw_velocity}")
         self.servo_ctrl.set_speed(channel, 0.0)
         
         scale_fw = 1.0
         scale_bw = 1.0
 
         if fw_velocity == 0:
-            print("エラー: 正転時にモーターが回転していないか、速度が0です。")
+            logger.error("正転時にモーターが回転していないか、速度が0です。")
         else:
             scale_fw = abs(target_velocity / fw_velocity)
 
         if bw_velocity == 0:
-            print("エラー: 逆転時にモーターが回転していないか、速度が0です。")
+            logger.error("逆転時にモーターが回転していないか、速度が0です。")
         else:
             scale_bw = abs(target_velocity / bw_velocity)
 
-        print(f"算出した速度スケール係数 -> 正転: {scale_fw:.3f}, 逆転: {scale_bw:.3f}")
+        logger.info(f"チャンネル {channel} の算出した速度スケール係数 -> 正転: {scale_fw:.3f}, 逆転: {scale_bw:.3f}")
         
         self.servo_ctrl.set_speed_scale(channel, scale_forward=scale_fw, scale_backward=scale_bw)
         return scale_fw, scale_bw
@@ -119,7 +120,7 @@ class SerialCalibrator:
         """
         複数のサーボの静止点（ニュートラルパルス）を同時にキャリブレーションする
         """
-        print("全チャンネルのニュートラルキャリブレーションを開始します...")
+        logger.info("全チャンネルのニュートラルキャリブレーションを開始します...")
         offsets = {ch: 0 for ch in channels}
         
         for ch in channels:
@@ -139,10 +140,10 @@ class SerialCalibrator:
                     continue
                     
                 velocity = self.get_velocity(cmd)
-                print(f"[Ch {ch}] 現在の速度: {velocity}, 現在のオフセット: {offsets[ch]}")
+                logger.debug(f"[Ch {ch}] 現在の速度: {velocity}, 現在のオフセット: {offsets[ch]}")
 
                 if abs(velocity) <= tolerance:
-                    print(f"-> Ch {ch} ニュートラル調整完了: 最終オフセット {offsets[ch]}us")
+                    logger.info(f"-> Ch {ch} ニュートラル調整完了: 最終オフセット {offsets[ch]}us")
                     active_channels.remove(ch)
                 else:
                     if velocity > 0:
@@ -156,7 +157,7 @@ class SerialCalibrator:
             time.sleep(0.5)
 
         if active_channels:
-            print(f"一部のチャンネルで完全な静止に至りませんでした: {active_channels}")
+            logger.warning(f"一部のチャンネルで完全な静止に至りませんでした: {active_channels}")
             
         return offsets
 
@@ -164,7 +165,7 @@ class SerialCalibrator:
         """
         複数のサーボの回転速度を正転・逆転両方で同時にキャリブレーションする
         """
-        print("全チャンネルの速度キャリブレーション(正転・逆転)を開始します...")
+        logger.info("全チャンネルの速度キャリブレーション(正転・逆転)を開始します...")
         scales_fw = {}
         scales_bw = {}
         
@@ -178,9 +179,9 @@ class SerialCalibrator:
         
         for ch, cmd in zip(channels, command_signals):
             velocity = self.get_velocity(cmd)
-            print(f"[Ch {ch}] 正転 指令値 {test_speed} での実際の速度: {velocity}")
+            logger.debug(f"[Ch {ch}] 正転 指令値 {test_speed} での実際の速度: {velocity}")
             if velocity == 0:
-                print(f"エラー: Ch {ch} 正転時にモーターが回転していないか、速度が0です。")
+                logger.error(f"Ch {ch} 正転時にモーターが回転していないか、速度が0です。")
                 scales_fw[ch] = 1.0
             else:
                 scales_fw[ch] = abs(target_velocity / velocity)
@@ -196,16 +197,16 @@ class SerialCalibrator:
 
         for ch, cmd in zip(channels, command_signals):
             velocity = self.get_velocity(cmd)
-            print(f"[Ch {ch}] 逆転 指令値 {-test_speed} での実際の速度: {velocity}")
+            logger.debug(f"[Ch {ch}] 逆転 指令値 {-test_speed} での実際の速度: {velocity}")
             if velocity == 0:
-                print(f"エラー: Ch {ch} 逆転時にモーターが回転していないか、速度が0です。")
+                logger.error(f"Ch {ch} 逆転時にモーターが回転していないか、速度が0です。")
                 scales_bw[ch] = 1.0
             else:
                 scales_bw[ch] = abs(target_velocity / velocity)
 
         for ch in channels:
             self.servo_ctrl.set_speed(ch, 0.0)
-            print(f"-> Ch {ch} 算出した速度スケール係数 - 正転: {scales_fw[ch]:.3f}, 逆転: {scales_bw[ch]:.3f}")
+            logger.info(f"-> Ch {ch} 算出した速度スケール係数 - 正転: {scales_fw[ch]:.3f}, 逆転: {scales_bw[ch]:.3f}")
             self.servo_ctrl.set_speed_scale(ch, scale_forward=scales_fw[ch], scale_backward=scales_bw[ch])
             
         return scales_fw, scales_bw

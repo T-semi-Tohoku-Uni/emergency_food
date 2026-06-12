@@ -5,6 +5,10 @@ from adafruit_pca9685 import PCA9685
 from adafruit_motor import servo
 import json
 import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
+from setup_logger import logger
 
 class ServoController:
     def __init__(self, channels=16,max_angle=180):
@@ -33,6 +37,8 @@ class ServoController:
             # デフォルトでは標準サーボとして初期化しておく
             s = servo.Servo(self.pca.channels[i], min_pulse=500, max_pulse=2400)
             self.servos.append(s)
+            
+        logger.info("ServoControllerの初期化が完了しました。")
 
     def set_calibration_offset(self, channel, offset_us):
         """
@@ -65,13 +71,13 @@ class ServoController:
         """
         # すでにローテーションサーボとして使われているチャンネルの誤操作を防ぐ
         if isinstance(self.servos[channel], servo.ContinuousServo):
-            print(f"Error: チャンネル{channel}はローテーションサーボとして設定されています。")
+            logger.error(f"チャンネル{channel}はローテーションサーボとして設定されています。")
             return
 
         if 0 <= angle <= self.max_angle:
             self.servos[channel].angle = angle
         else:
-            print(f"Error: 角度は0から180の間で指定してください (入力値: {angle})")
+            logger.error(f"角度は0から180の間で指定してください (入力値: {angle})")
 
     def set_speed(self, channel, speed):
         """
@@ -98,11 +104,12 @@ class ServoController:
             adjusted_speed = max(-1.0, min(1.0, adjusted_speed))
             self.servos[channel].throttle = adjusted_speed
         else:
-            print(f"Error: 速度は-1.0から1.0の間で指定してください (入力値: {speed})")
+            logger.error(f"速度は-1.0から1.0の間で指定してください (入力値: {speed})")
 
     def cleanup(self):
         """終了時にPCA9685の出力をリセットする"""
         self.pca.deinit()
+        logger.info("PCA9685の出力をリセットしました。")
 
     def save_calibration(self, filepath="calibration_data.json"):
         """キャリブレーションデータをJSONファイルに保存する"""
@@ -113,12 +120,12 @@ class ServoController:
         }
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=4)
-        print(f"キャリブレーションデータを {filepath} に保存しました。")
+        logger.info(f"キャリブレーションデータを {filepath} に保存しました。")
 
     def load_calibration(self, filepath="calibration_data.json"):
         """JSONファイルからキャリブレーションデータを読み込む"""
         if not os.path.exists(filepath):
-            print(f"キャリブレーションファイル {filepath} が見つかりません。")
+            logger.warning(f"キャリブレーションファイル {filepath} が見つかりません。")
             return False
             
         with open(filepath, 'r') as f:
@@ -132,5 +139,5 @@ class ServoController:
         if "scales_backward" in data:
             self.speed_scales_backward = {int(k): v for k, v in data["scales_backward"].items()}
             
-        print(f"キャリブレーションデータを {filepath} から読み込みました。")
+        logger.info(f"キャリブレーションデータを {filepath} から読み込みました。")
         return True

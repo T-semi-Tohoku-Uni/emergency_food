@@ -1,6 +1,11 @@
 import time
 from controllers.i2c_controller import ServoController
 import math
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
+from setup_logger import logger
 
 # 方針
 # アームの伸ばしたい位置と高さをコードで指定する。
@@ -33,9 +38,11 @@ class ArmController:
         # 【追加】初期化の最後に、安全な待機姿勢（ホームポジション）に移動させる
         # 例：前方に100mm、高さ50mmの位置で待機
         self.set_position(100, 50)
+        logger.info("ArmControllerの初期化が完了しました。")
 
     def set_position(self, length, height):
         # アームの長さと高さを指定して動かす
+        logger.info(f"アームを移動します: 目標 長さ={length}mm, 高さ={height}mm")
 
         # アームの位置が限界を超えていないかを確認
         self._check_limits(length, height)
@@ -57,7 +64,7 @@ class ArmController:
         # 左サーボの回転方向が反対のため、180度から引いて反転させる
         deg_right = 180.0 - deg_right
 
-        print(f"計算されたサーボの角度 -> 右: {deg_right:.1f}度, 左: {deg_left:.1f}度")
+        logger.debug(f"計算されたサーボの角度 -> 右: {deg_right:.1f}度, 左: {deg_left:.1f}度")
 
         # サーボの限界値以内かチェックする
         deg_right = self._check_angle(deg_right)

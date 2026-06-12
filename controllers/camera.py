@@ -1,5 +1,9 @@
 from picamera2 import Picamera2
 import time
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
+from setup_logger import logger
 
 class Camera:
     def __init__(self, width=3280, height=480):
@@ -10,6 +14,7 @@ class Camera:
         self.picam2.set_controls({"FrameRate": 60})
         self.picam2.start()
         time.sleep(2) # カメラの露出やホワイトバランスが安定するまで待機
+        logger.info("カメラを起動しました。")
 
     def capture(self, crop=None):
         """画像をNumPy配列（OpenCV形式）で取得して返す
@@ -23,6 +28,7 @@ class Camera:
 
     def stop(self):
         self.picam2.stop()
+        logger.info("カメラを停止しました。")
 
 def main():
     cam = Camera(width=3280, height=480)

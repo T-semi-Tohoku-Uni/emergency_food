@@ -42,6 +42,10 @@ def main():
 
     arm.set_position(140,60)
 
+    servo_ctrl.set_angle(9, 80)
+    arm.set_position(70,90)
+
+
     processed_frame, cx, cy, is_cross, angle_diff = detect_line(crop=(0, 240, 1200, 240))
 
     CHANNELS = [1, 14, 15, 0]
@@ -90,24 +94,28 @@ def main():
                 break # 待機ループを抜けてメイン処理へ進む
                 
             time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
+        arm.set_position(140,60)
 
         omni.Movexy(100,0)
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
         
         # 速度を少しだけ落とし、急ハンドル（D項の暴走）を防ぐために kd を下げる
-        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.7, kp=0.0006, ki=0.0, kd=0.0024, debug=True)
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, base_speed=0.7, kp=0.0006, ki=0.0, kd=0.0028, debug=False)
 
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
         for i in range(3):
             tracer.run(cross = True)
             tracer.run(timeout=0.3)
+        
+        logger.info(f"ライントレースが終了しました。")
 
         while True:
             
+            logger.info(f"ボールエリアに移動")
             omni.Movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)
-
-            # ボールの探索と、ボールを中心にとらえる処理を実行
+            
+            logger.info(f"ボールの探索と、ボールを中心にとらえる処理を実行")
             ball_color = search_in_ballarea(omni, detector)
             
             omni.Movexy(ball_area[area_step][0]*70,0)
@@ -115,6 +123,19 @@ def main():
             time.sleep(1)
             # アーム動作前など、完全に静止させたい場面でキャリブレーション付き停止を実行
             omni.stop(calibrate=True)
+
+            if ball_color == "blue":
+                coco = 1
+            elif ball_color == "yellow":
+                coco = 2
+            else:
+                coco = 3
+            
+            for i in range(coco):
+                tracer.run(cross = True)
+                tracer.run(timeout=0.3)
+            
+
 
 
 

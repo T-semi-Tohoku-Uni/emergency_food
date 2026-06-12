@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
 import cv2
 import numpy as np
 from controllers.camera import Camera
+from setup_logger import logger
 
 class BallDetector:
     def __init__(self, camera_instance=None, color_ranges=None):
@@ -93,6 +94,7 @@ class BallDetector:
         # 見つかったボールの中から、最も半径(radius)が大きいものを1つ選んで返す
         if detected_balls:
             biggest_ball = max(detected_balls, key=lambda b: b["radius"])
+            logger.debug(f"一番大きなボールを検出しました: 色={biggest_ball['color']}, 半径={biggest_ball['radius']}")
             return frame, biggest_ball
         else:
             return frame, None

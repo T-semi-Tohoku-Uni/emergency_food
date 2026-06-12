@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
 from controllers.i2c_controller import ServoController
 import math
 import serial
+from setup_logger import logger
 
 # 方針
 # その場回転とベクトルとxy方向の速度指定のコードを実装する。
@@ -44,6 +45,7 @@ class OmniSpeed:
         else:
             self.serial = serial.Serial(self.SERIAL_PORT, self.BAUDRATE, timeout=1.0)
             time.sleep(2) # シリアル接続の確立待ち
+        logger.info("OmniSpeedの初期化が完了しました。")
     
     # モーターへの出力処理を1つのメソッドに共通化
     def _set_motors(self, v_a, v_b, v_c, v_d, smooth=False):
@@ -140,8 +142,10 @@ class OmniSpeed:
             calibrator = SerialCalibrator(servo_ctrl=self.rot_servo, serial_instance=self.serial)
             channels = [self.front_right, self.front_left, self.rear_left, self.rear_right]
             calibrator.calibrate_neutral_all(channels, self.commands, tolerance=0.5)
+        logger.info("全モーターを停止しました。")
 
     def Movexy(self, x, y, speed=0.5):
+        logger.info(f"指定距離移動を開始: x={x}, y={y}, speed={speed}")
         # 前方をx、右向きをyとする
         wheel_rotation_x = x / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
         wheel_rotation_y = y / self.wheel_size * self.inv_root2 * self.pulses_per_revolution
@@ -169,9 +173,9 @@ class OmniSpeed:
                 time.sleep(0.001)
 
                 raw_data = self.serial.readline().decode('utf-8').strip()
-                print(str(self.commands[i])+str(raw_data))
+                # logger.debug(f"{self.commands[i]}: {raw_data}") # 頻繁に出力されるためコメントアウト推奨
                 if not raw_data:
-                    # print(f"[警告] {self.commands[i]} の返答が空(タイムアウト)です")
+                    # logger.warning(f"{self.commands[i]} の返答が空(タイムアウト)です")
                     continue
                 
                 try:
@@ -210,6 +214,7 @@ class OmniSpeed:
         
         # 最後に全てのモーターを完全に停止させる
         self._set_motors(0.0, 0.0, 0.0, 0.0)
+        logger.info("指定距離移動が完了しました。")
 
     def normalize(self, n, r):
         if n == 0:
