@@ -41,13 +41,13 @@ def main():
     arm = ArmController(servo_ctrl=servo_ctrl)
     
     # カメラを初期化（最大解像度で1つだけ作成し、全体で共有する）
-    cam = Camera(width=3280, height=120)
+    cam = Camera(width=3280, height=180)
     detector = BallDetector(camera_instance=cam)
 
     arm.set_position(140,60)
 
     servo_ctrl.set_angle(9, 80)
-    arm.set_position(70,100)
+    arm.set_position(60,100)
 
     # 最初のライントレース用の切り取りと検知
     test_frame = cam.capture()
@@ -104,6 +104,7 @@ def main():
                 
             time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
         arm.set_position(140,60)
+        servo_ctrl.set_angle(9, 180)
 
         logger.info(f"ラインを読める位置まで移動します")
         omni.Movexy(140,0)
@@ -111,7 +112,7 @@ def main():
         # ライントレース処理を実行
         
         # 速度を少しだけ落とし、急ハンドル（D項の暴走）を防ぐために kd を下げる
-        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.0010, ki=0.0, kd=0.0024, debug=False)
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.0008, ki=0.0, kd=0.0024, debug=False)
 
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
         for i in range(3):
@@ -130,13 +131,17 @@ def main():
             # ボール探索用にカメラの解像度を広くし、エラーを防ぐためFPSを自動で落とす
             cam.set_resolution(3280, 2400)
             
-            ball_color = search_in_ballarea(omni, detector)
+            while True:
+                ball_color = search_in_ballarea(omni, detector)
+                if ball_color != None:
+                    break
+                omni.Movexy(0,50)
             
+            servo_ctrl.set_angle(9, 70)
+
             omni.Movexy(ball_area[area_step][0]*70,0)
-            omni.rotation(1)
-            time.sleep(1)
-            # アーム動作前など、完全に静止させたい場面でキャリブレーション付き停止を実行
-            omni.stop(calibrate=True)
+            turn_180(omni)
+            tracer.run(timeout=3)
 
             if ball_color == "blue":
                 logger.info(f"青色のボールを保持")
@@ -150,19 +155,35 @@ def main():
                 
             # 次のライントレースに備えて、カメラの解像度を下げてFPSを60に戻す
             logger.info("ライントレース用にカメラの解像度を戻します。")
-            cam.set_resolution(3280, 120)
+            cam.set_resolution(3280, 180)
             
             for i in range(coco):
                 tracer.run(cross = True)
                 tracer.run(timeout=0.3)
             
-
-
-
-
-
-
-
+            if coco == 1:
+                omni.Movexy(0,600)
+                servo_ctrl.set_angle(9, 180)
+                omni.Movexy(0,-500)
+                turn_180(omni)
+                
+            elif coco == 2:
+                turn_90(omni,True)
+                omni.Movexy(0,300)
+                servo_ctrl.set_angle(9, 180)
+                omni.Movexy(0,-200)
+                turn_90(omni,True)
+            
+            elif coco == 3:
+                turn_90(omni,True)
+                omni.Movexy(0,300)
+                servo_ctrl.set_angle(9, 180)
+                omni.Movexy(0,-200)
+                turn_90(omni,True)
+                
+            for i in range(coco):
+                    tracer.run(cross = True)
+                    tracer.run(timeout=0.3)
 
     except KeyboardInterrupt:
         logger.info("プログラムを終了します。")
@@ -170,12 +191,26 @@ def main():
         serial_ctrl.close()
         cam.stop() # 終了時にカメラリソースを安全に解放する
 
+def turn_180(omni):
+    omni.rotation(1)
+    time.sleep(1.5)
+    omni.stop(calibrate=True)
+
+def turn_90(omni,wise =True):
+    if wise:
+        omni.rotation(1)
+    else:
+        omni.rotation(-1)
+    time.sleep(1)
+    omni.stop(calibrate=True)
+
 
 def search_in_ballarea(omni,detector):
     toto=False
     for i in range(2):
         for j in range(2):
-            omni.Movexy(70,0)
+            omni.Movexy(-70,0)
+            logger.info(f"ボールエリアの({j},{i})で探しています。")
             processed_frame, ball = detector.detect()
             if ball is not None:
                 toto = True
@@ -186,7 +221,7 @@ def search_in_ballarea(omni,detector):
     
     if not toto:
         logger.info("ボールが見つかりませんでした。")
-        return
+        return None
 
     logger.info("ボールへの接近を開始します。")
     center_x = 3280 // 2
