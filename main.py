@@ -10,7 +10,7 @@ def main():
     # オムニの初期化
     omni = OmniSpeed()
     servo_ctrl =  ServoController()
-
+    arm = ArmController()
     # シリアル通信の初期化 (環境に合わせてポート名を変更してください。例: Windowsなら 'COM3', Linuxなら '/dev/ttyACM0')
     serial_port = '/dev/ttyACM0' 
     baud_rate = 115200

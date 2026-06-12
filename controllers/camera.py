@@ -2,7 +2,7 @@ from picamera2 import Picamera2
 import time
 
 class Camera:
-    def __init__(self, width=640, height=480):
+    def __init__(self, width=3280, height=480):
         self.picam2 = Picamera2()
         config = self.picam2.create_preview_configuration(main={"size": (width, height)})
         self.picam2.configure(config)
@@ -23,14 +23,14 @@ class Camera:
         self.picam2.stop()
 
 def main():
-    cam = Camera(width=640, height=480)
+    cam = Camera(width=3280, height=480)
     try:
         print("画像をキャプチャします...")
         image_array = cam.capture()
         print(f"画像を取得しました！ サイズ: {image_array.shape}")
 
-        # 切り取りのテスト (例: x=100, y=100 の位置から 幅200, 高さ100 を切り取る)
-        cropped_image = cam.capture(crop=(100, 100, 200, 100))
+        # 切り取りのテスト (例: 画像の下半分を切り取る。640x480の場合、y=240から高さ240分)
+        cropped_image = cam.capture(crop=(0, 240, 3280, 240))
         print(f"切り取った画像サイズ: {cropped_image.shape}")
 
     finally:
