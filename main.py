@@ -117,11 +117,11 @@ def main():
         tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.7, ki=0.0, kd=1.5, debug=False)
 
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
-        for i in range(3):
+        for i in range(2):
             tracer.run(cross = True)
             logger.info(f"ラインを越えます")
             tracer.run(timeout=0.3)
-        
+        tracer.run(cross = True)
         logger.info(f"ライントレースが終了しました。")
 
         while True:
