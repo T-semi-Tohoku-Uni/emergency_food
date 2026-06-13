@@ -54,6 +54,14 @@ class BallDetector:
                 self.cam = Camera(width=3280, height=2400)
             frame = self.cam.capture()
 
+        # フレームが正しく取得できていない場合は処理をスキップ
+        if frame is None:
+            return frame, None
+
+        # 入力画像が1チャンネル（グレースケール）の場合、事前にBGRに変換しておく（OpenCVエラー対策）
+        if len(frame.shape) == 2 or frame.shape[2] == 1:
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+
         # 色の判定をしやすくするため、BGRからHSV色空間に変換
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         
