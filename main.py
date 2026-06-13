@@ -44,7 +44,7 @@ def main():
     cam = Camera(width=3280, height=180)
     detector = BallDetector(camera_instance=cam)
 
-    arm.set_position(140,60)
+    arm.set_position(140,70)
 
     servo_ctrl.set_angle(9, 90)
     arm.set_position(60,100)
@@ -112,7 +112,7 @@ def main():
         # ライントレース処理を実行
         
         # 速度を少しだけ落とし、急ハンドル（D項の暴走）を防ぐために kd を下げる
-        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.0008, ki=0.0, kd=0.0024, debug=False)
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.0010, ki=0.0, kd=0.0024, debug=False)
 
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
         for i in range(3):
@@ -125,6 +125,8 @@ def main():
         while True:
             
             logger.info(f"ボールエリアに移動")
+            arm.set_position(100,100)
+
             omni.Movexy(ball_area[area_step//2][0]*150,ball_area[area_step//2][1]*400)
             
             logger.info(f"ボールの探索と、ボールを中心にとらえる処理を実行")
@@ -138,8 +140,9 @@ def main():
                 omni.Movexy(0,50)
             
             area_step += 1
-
+            arm.set_position(100,70)
             servo_ctrl.set_angle(9, 100)
+            arm.set_position(100,100)
 
             omni.Movexy(ball_area[area_step//2][0]*70,0)
             omni.turn()
