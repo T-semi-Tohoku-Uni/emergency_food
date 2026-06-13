@@ -139,7 +139,7 @@ class LineTracer:
                 self.last_diff = diff
                 
                 if self.debug:
-                    logger.info(f"Diff:{diff:5d} | P:{p_term:7.4f} I:{i_term:7.4f} D:{d_term:7.4f} | Omega:{omega:7.4f}")
+                    logger.info(f"Diff:{diff:7.4f} | P:{p_term:7.4f} I:{i_term:7.4f} D:{d_term:7.4f} | Omega:{omega:7.4f}")
                 
                 self.omni.Speedxy_rotation(0, self.base_speed, omega)
             else:
