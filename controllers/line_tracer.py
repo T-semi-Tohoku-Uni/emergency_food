@@ -135,7 +135,7 @@ class LineTracer:
                 self.omni.Speedxy(0, 0, smooth=False)
                 
             # サンプリング周期を上げるため待機時間を短縮（0.05 -> 0.01）
-            time.sleep(0.01)
+            time.sleep(0.005)
 
             # --- 周波数(FPS)の計測とログ出力 ---
             frame_count += 1
