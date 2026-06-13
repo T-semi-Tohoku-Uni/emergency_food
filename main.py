@@ -46,7 +46,7 @@ def main():
 
     arm.set_position(140,60)
 
-    servo_ctrl.set_angle(9, 80)
+    servo_ctrl.set_angle(9, 90)
     arm.set_position(60,100)
 
     # 最初のライントレース用の切り取りと検知
@@ -103,8 +103,8 @@ def main():
                 break # 待機ループを抜けてメイン処理へ進む
                 
             time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
-        arm.set_position(140,60)
-        servo_ctrl.set_angle(9, 180)
+        arm.set_position(140,70)
+        servo_ctrl.set_angle(9, 60)
 
         logger.info(f"ラインを読める位置まで移動します")
         omni.Movexy(0,140)
@@ -139,7 +139,7 @@ def main():
             
             area_step += 1
 
-            servo_ctrl.set_angle(9, 70)
+            servo_ctrl.set_angle(9, 100)
 
             omni.Movexy(ball_area[area_step//2][0]*70,0)
             omni.turn()
@@ -165,21 +165,21 @@ def main():
             
             if coco == 1:
                 omni.Movexy(0,600)
-                servo_ctrl.set_angle(9, 180)
+                servo_ctrl.set_angle(9, 60)
                 omni.Movexy(0,-500)
                 omni.turn()
                 
             elif coco == 2:
                 omni.turn(90)
                 omni.Movexy(0,300)
-                servo_ctrl.set_angle(9, 180)
+                servo_ctrl.set_angle(9, 60)
                 omni.Movexy(0,-200)
                 omni.turn(90)
             
             elif coco == 3:
                 omni.turn(90)
                 omni.Movexy(0,300)
-                servo_ctrl.set_angle(9, 180)
+                servo_ctrl.set_angle(9, 60)
                 omni.Movexy(0,-200)
                 omni.turn(90)
                 
