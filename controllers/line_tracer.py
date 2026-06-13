@@ -64,6 +64,10 @@ class LineTracer:
         self.is_running = True
         start_time = time.time()
         
+        # 周波数(FPS)計測用の変数
+        fps_start_time = time.time()
+        frame_count = 0
+
         while self.is_running:
             # タイムアウトのチェック
             if timeout is not None and (time.time() - start_time) >= timeout:
@@ -133,5 +137,57 @@ class LineTracer:
             # サンプリング周期を上げるため待機時間を短縮（0.05 -> 0.01）
             time.sleep(0.01)
 
+            # --- 周波数(FPS)の計測とログ出力 ---
+            frame_count += 1
+            current_time = time.time()
+            elapsed_fps_time = current_time - fps_start_time
+            if elapsed_fps_time >= 1.0: # 1秒ごとに計算して出力
+                fps = frame_count / elapsed_fps_time
+                logger.info(f"ライントレース周波数: {fps:.1f} Hz")
+                fps_start_time = current_time
+                frame_count = 0
+
+
         # ループを抜けた後（ライントレース終了時）に必ずモーターを停止させる
         self.omni.Speedxy(0, 0, smooth=False)
+
+
+# --- テスト実行用 ---
+if __name__ == "__main__":
+    from controllers.serial_controller import SerialController
+    from controllers.i2c_controller import ServoController
+    from controllers.omni_controller import OmniSpeed
+    from controllers.camera import Camera
+
+    def test_line_tracer():
+        logger.info("=== LineTracer 動作確認テストを開始します ===")
+        
+        # シリアル通信の初期化
+        serial_ctrl = SerialController(port='/dev/ttyACM0', baud_rate=115200)
+        if not serial_ctrl.is_open():
+            logger.error("シリアルポートを開けませんでした。Picoが接続されているか確認してください。")
+            return
+            
+        # その他のコントローラーの初期化
+        servo_ctrl = ServoController()
+        omni = OmniSpeed(servo_ctrl=servo_ctrl, serial_instance=serial_ctrl.ser)
+        cam = Camera(width=3280, height=180) # ライントレース用の解像度で初期化
+        
+        # LineTracerのインスタンス化 (テスト用にdebug=Trueでログを詳細に出力)
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.3, debug=True)
+        
+        try:
+            logger.info("ライントレースを開始します。(停止するには Ctrl+C を押してください)")
+            # 交差点検知で止まるように実行
+            tracer.run(cross=True)
+            logger.info("交差点を検知したため停止しました。")
+        except KeyboardInterrupt:
+            logger.info("\nユーザー操作によりテストを中断しました。")
+        finally:
+            omni.stop()
+            servo_ctrl.cleanup()
+            cam.stop()
+            serial_ctrl.close()
+            logger.info("システムを安全に終了しました。")
+
+    test_line_tracer()

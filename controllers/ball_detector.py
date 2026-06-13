@@ -32,7 +32,21 @@ class BallDetector:
         else:
             self.color_ranges = color_ranges
 
+    # 周波数(FPS)計測用の変数
+        self.fps_start_time = time.time()
+        self.frame_count = 0
+
     def detect(self, crop=None, frame=None):
+        # --- 周波数(FPS)の計測とログ出力 ---
+        self.frame_count += 1
+        current_time = time.time()
+        elapsed_fps_time = current_time - self.fps_start_time
+        if elapsed_fps_time >= 1.0: # 1秒ごとに計算して出力
+            fps = self.frame_count / elapsed_fps_time
+            logger.info(f"ボール検知周波数: {fps:.1f} Hz")
+            self.fps_start_time = current_time
+            self.frame_count = 0
+            
         # frameが渡されなかった場合、カメラから自動取得する
         if frame is None:
             if self.cam is None:
