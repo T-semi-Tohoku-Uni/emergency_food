@@ -150,7 +150,17 @@ class LineTracer:
                 self.omni.Speedxy(0, 0, smooth=False)
                 
             # サンプリング周期を上げるため待機時間を短縮（0.05 -> 0.01）
-            time.sleep(0.01)
+            time.sleep(0.005)
+
+            # --- 周波数(FPS)の計測とログ出力 ---
+            frame_count += 1
+            current_time = time.time()
+            elapsed_fps_time = current_time - fps_start_time
+            if elapsed_fps_time >= 1.0: # 1秒ごとに計算して出力
+                fps = frame_count / elapsed_fps_time
+                logger.info(f"ライントレース周波数: {fps:.1f} Hz")
+                fps_start_time = current_time
+                frame_count = 0
 
             # --- 周波数(FPS)の計測とログ出力 ---
             frame_count += 1
@@ -165,7 +175,6 @@ class LineTracer:
 
         # ループを抜けた後（ライントレース終了時）に必ずモーターを停止させる
         self.omni.Speedxy(0, 0, smooth=False)
-
 
 # --- テスト実行用 ---
 if __name__ == "__main__":
