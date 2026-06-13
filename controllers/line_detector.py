@@ -20,10 +20,13 @@ def calculate_line_angle(contour):
 def detect_line(frame):
     """画像フレームから線を検出し、その重心や傾きを返す"""
 
-    # --- 高速化のためのリサイズ処理 ---
-    # 3280ピクセル幅は処理が重いため、1/4に縮小して処理を行う
-    scale = 0.25
-    small_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+    # フレームが正しく取得できていない場合は処理をスキップ
+    if frame is None:
+        return frame, None, None, False, 0.0
+
+    # 入力画像が1チャンネル（グレースケール）の場合、事前にBGRに変換しておく（OpenCVエラー対策）
+    if len(frame.shape) == 2 or frame.shape[2] == 1:
+        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
     # 1. グレースケール変換
     gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
@@ -62,7 +65,8 @@ def detect_line(frame):
             w_original = w / scale
             h_original = h / scale
             is_cross = False
-            if w_original > frame.shape[1] * 0.4 and h_original > 20:
+            # 幅が画面の40%以上あり、かつ単なるノイズを誤認しないよう高さが20ピクセル以上あるかを確認
+            if w > frame.shape[1] * 0.4 and h > 20:
                 is_cross = True
                 cv2.putText(frame, "CROSS DETECTED", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             

@@ -8,7 +8,7 @@ from setup_logger import logger
 from controllers.line_detector import detect_line
 
 class LineTracer:
-    def __init__(self, omni, serial_ctrl, camera, base_speed=0.3, kp=0.0005, ki=0.0, kd=5.0, debug=False):
+    def __init__(self, omni, serial_ctrl, camera, base_speed=0.3, kp=0.5, ki=0.0, kd=1.5, debug=False):
         """
         ライントレースを実行するクラス
         omni: OmniSpeedインスタンス
@@ -28,13 +28,16 @@ class LineTracer:
         self.kd = kd
         self.debug = debug
         
-        # カメラの画像幅が 3280 のため、その中心である 1640 を基準にする
-        self.center_x = 3280 // 2  
+        # 中心位置はカメラから画像を取得した際に動的に決定する
+        self.center_x = None 
 
         # PID制御用の変数
         self.last_diff = 0.0
         self.integral = 0.0
         self.integral_limit = 1000.0  # 積分値のワインドアップ対策（上限・下限）
+
+        # 線を見失っている状態かどうかのフラグ（再発見時の暴走対策）
+        self.line_lost = True
 
         # 実行状態を管理するフラグ
         self.is_running = False
@@ -84,6 +87,11 @@ class LineTracer:
 
             # 画像全体を使って線を検知
             frame = self.camera.capture()
+            
+            # 取得した画像の幅から動的に中心位置を計算する（左に曲がり続けるバグの対策）
+            if frame is not None:
+                self.center_x = frame.shape[1] // 2
+                
             processed_frame, cx, cy, is_cross, angle_diff = detect_line(frame)
             
             if cx is not None:
@@ -101,8 +109,14 @@ class LineTracer:
                         continue
 
                 # 画像の中心からのズレを算出
-                diff = cx - self.center_x
+                # 画像サイズによらず同じ割合のズレとして扱えるように、相対値（-1.0 〜 1.0）に正規化
+                diff = (cx - self.center_x) / self.center_x
                 
+                # 線を再発見した直後は、前回のdiffが存在しないためD項が暴走するのを防ぐ
+                if self.line_lost:
+                    self.last_diff = diff
+                    self.line_lost = False
+
                 # PID制御の計算
                 self.integral += diff
                 
@@ -125,13 +139,14 @@ class LineTracer:
                 self.last_diff = diff
                 
                 if self.debug:
-                    logger.info(f"Diff:{diff:5d} | P:{p_term:7.4f} I:{i_term:7.4f} D:{d_term:7.4f} | Omega:{omega:7.4f}")
+                    logger.info(f"Diff:{diff:7.4f} | P:{p_term:7.4f} I:{i_term:7.4f} D:{d_term:7.4f} | Omega:{omega:7.4f}")
                 
                 self.omni.Speedxy_rotation(0, self.base_speed, omega)
             else:
                 # 線が見つからない場合は安全のため停止
                 self.integral = 0.0
-                self.last_diff = 0.0
+                # last_diff は 0 にリセットせず、再発見時の暴走を防ぐためにフラグを立てる
+                self.line_lost = True
                 self.omni.Speedxy(0, 0, smooth=False)
                 
             # サンプリング周期を上げるため待機時間を短縮（0.05 -> 0.01）
@@ -146,6 +161,17 @@ class LineTracer:
                 logger.info(f"ライントレース周波数: {fps:.1f} Hz")
                 fps_start_time = current_time
                 frame_count = 0
+
+            # --- 周波数(FPS)の計測とログ出力 ---
+            frame_count += 1
+            current_time = time.time()
+            elapsed_fps_time = current_time - fps_start_time
+            if elapsed_fps_time >= 1.0: # 1秒ごとに計算して出力
+                fps = frame_count / elapsed_fps_time
+                logger.info(f"ライントレース周波数: {fps:.1f} Hz")
+                fps_start_time = current_time
+                frame_count = 0
+
 
         # ループを抜けた後（ライントレース終了時）に必ずモーターを停止させる
         self.omni.Speedxy(0, 0, smooth=False)

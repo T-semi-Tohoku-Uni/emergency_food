@@ -41,6 +41,7 @@ def main():
     arm = ArmController(servo_ctrl=servo_ctrl)
     
     # カメラを初期化（最大解像度で1つだけ作成し、全体で共有する）
+    # クロップを使わずに指定通りの解像度を引き出すため、標準的な16:9の比率を使用します
     cam = Camera(width=3280, height=180)
     detector = BallDetector(camera_instance=cam)
 
@@ -112,14 +113,15 @@ def main():
         # ライントレース処理を実行
         
         # 速度を少しだけ落とし、急ハンドル（D項の暴走）を防ぐために kd を下げる
-        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.0016, ki=0.0, kd=0.0024, debug=False)
+        # diffが相対値(-1.0 ~ 1.0)になったため、kpとkdの値を新しいスケールに合わせて調整
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.7, ki=0.0, kd=1.5, debug=False)
 
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
-        for i in range(3):
+        for i in range(2):
             tracer.run(cross = True)
             logger.info(f"ラインを越えます")
             tracer.run(timeout=0.3)
-        
+        tracer.run(cross = True)
         logger.info(f"ライントレースが終了しました。")
 
         while True:
@@ -160,7 +162,7 @@ def main():
                 
             # 次のライントレースに備えて、カメラの解像度を下げてFPSを60に戻す
             logger.info("ライントレース用にカメラの解像度を戻します。")
-            cam.set_resolution(3280, 180)
+            cam.set_resolution(1280, 720)
             
             for i in range(coco):
                 tracer.run(cross = True)
