@@ -112,7 +112,7 @@ def main():
         # ライントレース処理を実行
         
         # 速度を少しだけ落とし、急ハンドル（D項の暴走）を防ぐために kd を下げる
-        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.0008, ki=0.0, kd=0.0024, debug=False)
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.0016, ki=0.0, kd=0.0024, debug=False)
 
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
         for i in range(3):
