@@ -140,6 +140,14 @@ void loop() {
       Serial.println(current_vel_c);
     } else if (cmd == "veld") {
       Serial.println(current_vel_d);
+    } else if (cmd == "stepall"){
+      Serial.print(current_step_a - offset_a); 
+      Serial.print(",");
+      Serial.print(current_step_b - offset_b); 
+      Serial.print(",");
+      Serial.print(current_step_c - offset_c); 
+      Serial.print(",");
+      Serial.println(current_step_d - offset_d); 
     }
   }
 
@@ -147,9 +155,9 @@ void loop() {
   unsigned long elapsedTime = currentTime - lastTime;
 
   // 小数誤差を避けるため、経過時間をマイクロ秒（100,000us = 100ms）のまま判定
-  if (elapsedTime >= 1000) {
+  if (elapsedTime >= 100) {
     // 実際の経過時間を元に dt を計算し、速度の計算精度を保つ
-    float dt = elapsedTime / 1000.0; 
+    float dt = elapsedTime / 100.0; 
     // 変更: PIOステートマシンから現在のカウントを取得
     current_step_a = myEncoder_a.getCount();
     current_step_b = myEncoder_b.getCount();

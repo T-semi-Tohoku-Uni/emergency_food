@@ -103,7 +103,7 @@ class ArmController:
     
     def _check_diff_angle(self, angle1, angle2):
         # 2つのサーボの角度差がmax_diff度以内か確認する
-        max_diff = 270-30
+        max_diff = 270-10
         if abs(angle1 + angle2) <= max_diff:
             return True
         else:

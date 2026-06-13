@@ -20,18 +20,25 @@ def calculate_line_angle(contour):
 def detect_line(frame):
     """画像フレームから線を検出し、その重心や傾きを返す"""
 
+    # フレームが正しく取得できていない場合は処理をスキップ
+    if frame is None:
+        return frame, None, None, False, 0.0
+
+    # 入力画像が1チャンネル（グレースケール）の場合、事前にBGRに変換しておく（OpenCVエラー対策）
+    if len(frame.shape) == 2 or frame.shape[2] == 1:
+        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+
     # 1. グレースケール変換
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
     
     # 2. ガウシアンブラーでノイズ除去 (5x5のカーネル)
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
     # 3. 二値化（黒い線を抽出）
-    # 背景が白、線が黒の場合。環境の明るさに合わせて閾値(ここでは60)を調整してください。
-    # cv2.THRESH_BINARY_INV を使うことで、黒い線を「白(255)」として抽出します。
     _, thresh = cv2.threshold(blur, 60, 255, cv2.THRESH_BINARY_INV)
 
-    contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # 4. 輪郭抽出 (RETR_EXTERNALを使うことで内部の輪郭探索を省き高速化)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     if len(contours) > 0:
         # 最も面積の大きい輪郭（ノイズではなく実際の線）を見つける
@@ -40,23 +47,29 @@ def detect_line(frame):
         # 5. 重心の計算 (画像モーメント)
         M = cv2.moments(c)
         if M["m00"] != 0:
-            cx = int(M["m10"] / M["m00"])
-            cy = int(M["m01"] / M["m00"])
+            # 縮小画像上での重心
+            small_cx = int(M["m10"] / M["m00"])
+            small_cy = int(M["m01"] / M["m00"])
+            
+            # 元のスケールに座標を戻す
+            cx = int(small_cx / scale)
+            cy = int(small_cy / scale)
             
             # 線の傾き（角度）を計算
             angle_diff = calculate_line_angle(c)
             
             # 交差点（T字、十字）の判定
             x, y, w, h = cv2.boundingRect(c)
+            
+            # 幅と高さも元のスケールに戻して判定
+            w_original = w / scale
+            h_original = h / scale
             is_cross = False
-            # 70%は条件として厳しすぎるため 40% に緩和。
-            # 単なるノイズを交差点と誤認しないように、高さ(h)が 20ピクセル 以上あることも条件にする
+            # 幅が画面の40%以上あり、かつ単なるノイズを誤認しないよう高さが20ピクセル以上あるかを確認
             if w > frame.shape[1] * 0.4 and h > 20:
                 is_cross = True
                 cv2.putText(frame, "CROSS DETECTED", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             
-            # 結果をわかりやすく描画 (元のフレームに上書き)
-            cv2.drawContours(frame, [c], -1, (0, 255, 0), 2) # 抽出した輪郭を緑色で囲む
             cv2.circle(frame, (cx, cy), 7, (0, 0, 255), -1)  # 重心に赤い点を打つ
             cv2.putText(frame, f"Angle: {angle_diff:.1f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
             

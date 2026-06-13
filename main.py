@@ -41,12 +41,13 @@ def main():
     arm = ArmController(servo_ctrl=servo_ctrl)
     
     # カメラを初期化（最大解像度で1つだけ作成し、全体で共有する）
+    # クロップを使わずに指定通りの解像度を引き出すため、標準的な16:9の比率を使用します
     cam = Camera(width=3280, height=180)
     detector = BallDetector(camera_instance=cam)
 
-    arm.set_position(140,60)
+    arm.set_position(140,70)
 
-    servo_ctrl.set_angle(9, 80)
+    servo_ctrl.set_angle(9, 90)
     arm.set_position(60,100)
 
     # 最初のライントレース用の切り取りと検知
@@ -103,29 +104,32 @@ def main():
                 break # 待機ループを抜けてメイン処理へ進む
                 
             time.sleep(0.5) # 待機中のCPU負荷を下げるためのウェイト
-        arm.set_position(140,60)
-        servo_ctrl.set_angle(9, 180)
+        arm.set_position(140,70)
+        servo_ctrl.set_angle(9, 60)
 
         logger.info(f"ラインを読める位置まで移動します")
-        omni.Movexy(140,0)
+        omni.Movexy(0,140)
         # "start robot!" 検知後のメインループ
         # ライントレース処理を実行
         
         # 速度を少しだけ落とし、急ハンドル（D項の暴走）を防ぐために kd を下げる
-        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.0008, ki=0.0, kd=0.0024, debug=False)
+        # diffが相対値(-1.0 ~ 1.0)になったため、kpとkdの値を新しいスケールに合わせて調整
+        tracer = LineTracer(omni=omni, serial_ctrl=serial_ctrl, camera=cam, base_speed=0.7, kp=0.7, ki=0.0, kd=1.5, debug=False)
 
         # 交差点を見つけるまでライントレースを実行するのを3回繰り返す
-        for i in range(3):
+        for i in range(2):
             tracer.run(cross = True)
             logger.info(f"ラインを越えます")
             tracer.run(timeout=0.3)
-        
+        tracer.run(cross = True)
         logger.info(f"ライントレースが終了しました。")
 
         while True:
             
             logger.info(f"ボールエリアに移動")
-            omni.Movexy(ball_area[area_step][0]*150,ball_area[area_step][1]*400)
+            arm.set_position(100,100)
+
+            omni.Movexy(ball_area[area_step//2][0]*150,ball_area[area_step//2][1]*400)
             
             logger.info(f"ボールの探索と、ボールを中心にとらえる処理を実行")
             # ボール探索用にカメラの解像度を広くし、エラーを防ぐためFPSを自動で落とす
@@ -137,10 +141,13 @@ def main():
                     break
                 omni.Movexy(0,50)
             
-            servo_ctrl.set_angle(9, 70)
+            area_step += 1
+            arm.set_position(100,70)
+            servo_ctrl.set_angle(9, 100)
+            arm.set_position(100,100)
 
-            omni.Movexy(ball_area[area_step][0]*70,0)
-            turn_180(omni)
+            omni.Movexy(ball_area[area_step//2][0]*70,0)
+            omni.turn()
             tracer.run(timeout=3)
 
             if ball_color == "blue":
@@ -155,7 +162,7 @@ def main():
                 
             # 次のライントレースに備えて、カメラの解像度を下げてFPSを60に戻す
             logger.info("ライントレース用にカメラの解像度を戻します。")
-            cam.set_resolution(3280, 180)
+            cam.set_resolution(1280, 720)
             
             for i in range(coco):
                 tracer.run(cross = True)
@@ -163,23 +170,23 @@ def main():
             
             if coco == 1:
                 omni.Movexy(0,600)
-                servo_ctrl.set_angle(9, 180)
+                servo_ctrl.set_angle(9, 60)
                 omni.Movexy(0,-500)
-                turn_180(omni)
+                omni.turn()
                 
             elif coco == 2:
-                turn_90(omni,True)
+                omni.turn(90)
                 omni.Movexy(0,300)
-                servo_ctrl.set_angle(9, 180)
+                servo_ctrl.set_angle(9, 60)
                 omni.Movexy(0,-200)
-                turn_90(omni,True)
+                omni.turn(90)
             
             elif coco == 3:
-                turn_90(omni,True)
+                omni.turn(90)
                 omni.Movexy(0,300)
-                servo_ctrl.set_angle(9, 180)
+                servo_ctrl.set_angle(9, 60)
                 omni.Movexy(0,-200)
-                turn_90(omni,True)
+                omni.turn(90)
                 
             for i in range(coco):
                     tracer.run(cross = True)
@@ -191,18 +198,18 @@ def main():
         serial_ctrl.close()
         cam.stop() # 終了時にカメラリソースを安全に解放する
 
-def turn_180(omni):
-    omni.rotation(1)
-    time.sleep(1.5)
-    omni.stop(calibrate=True)
+# def turn_180(omni):
+#     omni.rotation(1)
+#     time.sleep(1.5)
+#     omni.stop(calibrate=True)
 
-def turn_90(omni,wise =True):
-    if wise:
-        omni.rotation(1)
-    else:
-        omni.rotation(-1)
-    time.sleep(1)
-    omni.stop(calibrate=True)
+# def turn_90(omni,wise =True):
+#     if wise:
+#         omni.rotation(1)
+#     else:
+#         omni.rotation(-1)
+#     time.sleep(1)
+#     omni.stop(calibrate=True)
 
 
 def search_in_ballarea(omni,detector):
